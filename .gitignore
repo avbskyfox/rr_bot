@@ -1,0 +1,5 @@
+db.sqlite3
+cabinet/__pycache__/
+cabinet/migrations/__pycache__/
+rosreestr/__pycache__/
+/.idea/
