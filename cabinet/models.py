@@ -4,7 +4,7 @@ from django.contrib.auth.models import AbstractUser
 
 
 class User(AbstractUser):
-    telegram_id = models.CharField(max_length=100, blank=True)
+    telegram_id = models.CharField(max_length=100, blank=True, db_index=True, unique=True)
 
 
 class Curencies(models.Model):

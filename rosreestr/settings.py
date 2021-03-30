@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'cabinet.apps.CabinetConfig',
+    'rr_telebot.apps.RrTelebotConfig'
 ]
 
 MIDDLEWARE = [

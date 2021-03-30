@@ -4,3 +4,4 @@ cabinet/migrations/__pycache__/
 rosreestr/__pycache__/
 /.idea/
 cabinet/migrations/*
+rr_telebot/migrations/*
