@@ -12,7 +12,7 @@ class Dialog(models.Model):
                                        db_index=True,
                                        primary_key=True)
     step = models.IntegerField(verbose_name='шаг', default=0)
-    data = models.JSONField(verbose_name='данные', default={})
+    data = models.JSONField(verbose_name='данные', default=dict)
 
     def flush(self):
         self.step = 0

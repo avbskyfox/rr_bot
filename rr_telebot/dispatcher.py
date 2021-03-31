@@ -1,14 +1,15 @@
 import telebot
 import json
-from rr_telebot.test_backend import TestBackend
+from rr_backend.test_backend import TestBackend
 import os
 import django
 from telebot import apihelper
+from loguru import logger
 
 apihelper.ENABLE_MIDDLEWARE = True
 os.environ["DJANGO_SETTINGS_MODULE"] = 'rosreestr.settings'
 django.setup()
-from cabinet.models import User
+from cabinet.models import User, Service, Curency, Purse, Order, OrderException, BackendException
 from rr_telebot.models import Dialog
 
 backend = TestBackend()
@@ -17,7 +18,6 @@ bot = telebot.TeleBot('1715391513:AAEkJQfptLEOf-veUqgpLlKitQjKliUPRrs')
 
 def checker_func(call: telebot.types.CallbackQuery, step: int) -> bool:
     dialog, _ = Dialog.objects.get_or_create(pk=call.from_user.id)
-    print(dialog.step == step)
     return dialog.step == step
 
 
@@ -31,13 +31,14 @@ check_step = StepCheckersPooll()
 
 @bot.middleware_handler(update_types=['message'])
 def registration_check(bot_instance: telebot.TeleBot, message: telebot.types.Message):
-    print(message.from_user.id)
+    logger.debug(f"{message.from_user.id} write: {message.text}")
     user, is_created = User.objects.get_or_create(telegram_id=message.from_user.id)
     user.username = message.from_user.id
     user.save()
     if is_created:
         user.username = message.from_user.id
         user.save()
+        logger.debug(f"user {user.username} created")
         keyboard = telebot.types.InlineKeyboardMarkup()
         url = telebot.types.InlineKeyboardButton(text='Сайт', url='http://127.0.0.1:8000')
         keyboard.add(url)
@@ -49,6 +50,7 @@ def registration_check(bot_instance: telebot.TeleBot, message: telebot.types.Mes
 @bot.message_handler(content_types=['text'], regexp="^(\d\d):(\d\d):*")
 def address_by_number_handler(message: telebot.types.Message):
     result = backend.address_by_number(message.text)
+    logger.debug(f'beckend response: {result}')
     dialog, _ = Dialog.objects.get_or_create(pk=message.from_user.id)
     dialog.flush()
     if result['success']:
@@ -70,7 +72,7 @@ def address_by_number_handler(message: telebot.types.Message):
 @bot.message_handler(content_types=['text'], regexp=".* .* .*")
 def number_by_address_handler(message):
     result = backend.number_by_address(message.text)
-    print(result)
+    logger.debug(f'beckend response: {result}')
     if result['success'] == 1:
         dialog, _ = Dialog.objects.get_or_create(pk=message.from_user.id)
         dialog.flush()
@@ -93,79 +95,80 @@ def number_by_address_handler(message):
 def continue_handler(call: telebot.types.CallbackQuery):
     dialog, _ = Dialog.objects.get_or_create(pk=call.from_user.id)
     keyboard = telebot.types.InlineKeyboardMarkup()
-    button1 = telebot.types.InlineKeyboardButton('ВАРИАНТ1',
-                                                 callback_data=1)
-    button2 = telebot.types.InlineKeyboardButton('ВАРИАНТ2',
-                                                 callback_data=2)
-    button3 = telebot.types.InlineKeyboardButton('ОБА ВАРИАНТА', callback_data=3)
-    keyboard.row(button1)
-    keyboard.row(button2)
-    keyboard.row(button3)
-    bot.send_message(call.message.chat.id, f"Для объекта: {dialog.data['address']}, кадастровый номер:"
-                                      f"{dialog.data['number']}\n"
-                                      f"Выбирете вариант выписки:\n"
-                                      f"Вариант1: выписка бла бла бла за 60р\n"
-                                      f"Вариант2: выписка бло бло бло 60р\n"
-                                      f"Вариант3: обе выписки за 100р", reply_markup=keyboard)
+    phrase = f"Для объекта: {dialog.data['address']}, кадастровый номер: {dialog.data['number']}\n" \
+             f"Выбирете вариант услуги:\n"
+
+    for i, serice in enumerate(Service.objects.all()):
+        button = telebot.types.InlineKeyboardButton(i + 1, callback_data=serice.id)
+        keyboard.row(button)
+        phrase += f"Вариант {i + 1}: {serice.name}\n"
+
+    bot.send_message(call.message.chat.id, phrase, reply_markup=keyboard)
     dialog.step = 3
     dialog.save()
 
 
 @bot.callback_query_handler(func=check_step[3])
 def confirm_step(call: telebot.types.CallbackQuery):
-    print('step 3')
-    print(call)
     dialog, _ = Dialog.objects.get_or_create(telegram_id=call.from_user.id)
-    data = json.loads(call.data)
     dialog.step = 4
-    if data == 1:
-        dialog.data['type'] = 1
-        dialog.save()
-        phrase = "выписка бла бла бла за 60р"
-    elif data == 2:
-        dialog.data['type'] = 2
-        dialog.save()
-        phrase = "выписка бло бло бло за 60р"
-    elif data == 3:
-        dialog.data['type'] = 3
-        dialog.save()
-        phrase = "обе выписки за 100р"
+    service = Service.objects.get(pk=call.data)
+    dialog.data['service'] = service.id
+    dialog.save()
+    phrase = service.name
     keyboard = telebot.types.InlineKeyboardMarkup()
     yes = telebot.types.InlineKeyboardButton('ДА', callback_data='__yes__')
     no = telebot.types.InlineKeyboardButton('НЕТ', callback_data='__no__')
     keyboard.add(yes, no)
-    bot.send_message(call.message.chat.id, f"Для объекта {dialog.data['address']} вы заказываете {phrase}", reply_markup=keyboard)
+    bot.send_message(call.message.chat.id, f"Для объекта {dialog.data['address']} вы заказываете {phrase}",
+                     reply_markup=keyboard)
 
 
 @bot.callback_query_handler(func=check_step[4])
 def make_query(call: telebot.types.CallbackQuery):
-    print('step 4')
-    print(call)
     dialog, _ = Dialog.objects.get_or_create(telegram_id=call.from_user.id)
-    if call.data == '__yes__':
-        if dialog.data['type'] == 1:
-            result = backend.get_doc_type1(dialog.data['number'])
-            if result['success'] == 1:
-                bot.send_message(call.message.chat.id, 'Вы заказали выписку 1')
-        elif dialog.data['type'] == 2:
-            result = backend.get_doc_type2(dialog.data['number'])
-            if result['success'] == 1:
-                bot.send_message(call.message.chat.id, 'Вы заказали выписку 2')
-        elif dialog.data['type'] == 3:
-            result = backend.get_doc_type1(dialog.data['number'])
-            if result['success'] == 1:
-                bot.send_message(call.message.chat.id, 'Вы заказали выписку 1')
-            result = backend.get_doc_type2(dialog.data['number'])
-            if result['success'] == 1:
-                bot.send_message(call.message.chat.id, 'Вы заказали выписку 2')
-    dialog.flush()
+    if call.data == '__yes__' or call.data == 'continue':
+        service = Service.objects.get(pk=dialog.data['service'])
+        curency = Curency.objects.get(name__exact='RUR')
+        purse, _ = Purse.objects.get_or_create(user=dialog.telegram_id, curency=curency)
+        if not service.check_ammount(dialog.telegram_id, curency):
+            keyboard = telebot.types.InlineKeyboardMarkup()
+            fill_url = telebot.types.InlineKeyboardButton(text='Пополнить', url='http://127.0.0.1')
+            ok = telebot.types.InlineKeyboardButton(text='Продолжить', callback_data='continue')
+            keyboard.row(fill_url)
+            keyboard.row(ok)
+            bot.send_message(call.message.chat.id,
+                             f"На вашем счете {purse.ammount} {curency.name}, "
+                             f"сумма заказа: {service.price} {curency.name}.\n"
+                             f"Для продолжени пополните счет",
+                             reply_markup=keyboard)
+        else:
+            logger.debug(f'trying to create order for {dialog.telegram_id}, {service}, {curency}')
+            try:
+                order = Order.create_order(dialog.telegram_id,
+                                           service,
+                                           curency,
+                                           address=dialog.data['address'],
+                                           number=dialog.data['number'])
+                bot.send_message(call.message.chat.id, f"Создан заказ № {order.number}")
+            except OrderException as m:
+                logger.error(m)
+            except BackendException as m:
+                logger.error(m)
+                bot.send_message(call.message.chat.id, f"Извините, сервис не может выполнить запрос")
+            dialog.flush()
+    else:
+        dialog.flush()
+
+
+@bot.callback_query_handler(func=check_step[0])
+def fluched_dialog(call: telebot.types.CallbackQuery):
+    bot.send_message(call.message.chat.id, f'Что бы начать введите кадастровый номер или адресс объекта')
 
 
 @bot.message_handler(content_types=['text'])
 def greeting_message(message):
-    print(message.text)
     bot.send_message(message.chat.id, f'Что бы начать введите кадастровый номер или адресс объекта')
 
 
-print('Start bot')
 bot.polling(none_stop=True)
