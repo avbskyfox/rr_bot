@@ -171,4 +171,10 @@ def greeting_message(message):
     bot.send_message(message.chat.id, f'Что бы начать введите кадастровый номер или адресс объекта')
 
 
-bot.polling(none_stop=True)
+@logger.catch()
+def run():
+    bot.polling(none_stop=True)
+
+
+if __name__ == '__main__':
+    run()
