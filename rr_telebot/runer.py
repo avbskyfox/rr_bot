@@ -2,10 +2,11 @@ from rr_telebot.dispatcher import run
 
 
 def main():
-    try:
-        run()
-    except:
-        main()
+    while True:
+        try:
+            run()
+        except:
+            pass
 
 
 if __name__ == '__main__':
