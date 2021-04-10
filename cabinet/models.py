@@ -64,6 +64,7 @@ class Service(models.Model):
         verbose_name_plural = 'Услуги'
     name = models.CharField(max_length=1000, verbose_name='Название услуги')
     short_name = models.CharField(max_length=100, verbose_name='Короткое название')
+    button_lable = models.CharField(max_length=20, verbose_name='Кнопка в телегеграм')
     excerpt_types_set = models.ManyToManyField(ExcerptType,
                                                verbose_name='Тип выписки')
     price = models.IntegerField(verbose_name='Цена')
