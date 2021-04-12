@@ -33,19 +33,19 @@ class AsyncTestBackend(RossreestrInterface):
         elif rnd == 2:
             return {'success': 0, 'data': None, 'message': 'Слишком много вариантов, уточните адресс'}
 
-    async def get_type1(self, query):
+    def get_type1(self, query):
         return {'success': True, 'message': 'сообщение об успехе', 'data': {'number': 1234}}
 
-    async def get_type2(self, query):
+    def get_type2(self, query):
         return {'success': True, 'message': 'сообщение об успехе',  'data': {'number': 1234}}
 
 
 async_backend = AsyncTestBackend()
 
 
-async def get_type1(**kwargs):
-    return await async_backend.get_type1(kwargs['number'])
+def get_type1(**kwargs):
+    return async_backend.get_type1(kwargs['number'])
 
 
-async def get_type2(**kwargs):
-    return await async_backend.get_type2(kwargs['number'])
+def get_type2(**kwargs):
+    return async_backend.get_type2(kwargs['number'])

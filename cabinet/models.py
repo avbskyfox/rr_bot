@@ -26,6 +26,7 @@ class Curency(models.Model):
         verbose_name_plural = 'Валюты'
 
     name = models.CharField(max_length=30)
+    course = models.FloatField(default=1.0)
 
     def __str__(self):
         return self.name
@@ -67,12 +68,15 @@ class Service(models.Model):
     button_lable = models.CharField(max_length=20, verbose_name='Кнопка в телегеграм')
     excerpt_types_set = models.ManyToManyField(ExcerptType,
                                                verbose_name='Тип выписки')
-    price = models.IntegerField(verbose_name='Цена')
+    base_price = models.IntegerField(verbose_name='Цена')
     coefficient = models.FloatField(verbose_name='Скидочный коэфициент')
+
+    def get_price(self, curency: Curency):
+        return self.base_price
 
     def check_ammount(self, user: User, curency: Curency):
         purse, _ = Purse.objects.get_or_create(user=user, curency=curency)
-        return 0 <= purse.ammount - self.price
+        return 0 <= purse.ammount - self.base_price
 
     @classmethod
     def price_list(cls):
@@ -81,6 +85,13 @@ class Service(models.Model):
             result.append({'service': service.short_name, 'price': service.price})
         result.sort(key=lambda item: item['price'])
         return result
+
+    def serialize(self):
+        return {
+            'name': self.name,
+            'short_name': self.short_name,
+            'base_price': self.base_price,
+        }
 
     def __str__(self):
         return self.name
@@ -121,7 +132,7 @@ class Order(models.Model):
         purse = user.purse_set.filter(curency=curency).first()
         order.user = user
         order.service = service
-        order.price = service.price * service.coefficient * purse.coefficient
+        order.price = service.base_price * service.coefficient * purse.coefficient
         order.save()
         purse.ammount = purse.ammount - order.price
         purse.save()

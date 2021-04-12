@@ -9,7 +9,6 @@ from asgiref.sync import sync_to_async
 from cabinet.models import *
 from rr_telebot.models import *
 
-
 DEFAULT_CURENCY = getattr(settings, 'DEFAULT_CURENCY', 'RUR')
 
 
@@ -25,8 +24,9 @@ def create_user(username: str, telegram_id: int):
     return user, created
 
 
-def get_or_create_purse(user: User):
-    curency = Curency.objects.get(name__exact=DEFAULT_CURENCY)
+def get_or_create_purse(user: User, curency: Curency = None):
+    if curency is None:
+        curency = Curency.objects.get(name__exact=DEFAULT_CURENCY)
     purse, _ = Purse.objects.get_or_create(curency=curency, user=user)
     return purse
 
@@ -41,8 +41,8 @@ def new_dialog(telegram_id: int):
 
 @sync_to_async
 def step2_db(dialog: Dialog, number: str, address: str):
-    dialog.data['number'] = number
-    dialog.data['address'] = address
+    dialog.number = number
+    dialog.address = address
     dialog.step = 3
     dialog.save()
 
@@ -59,8 +59,8 @@ def step3_db(telegram_id: int):
     dialog.step = 4
     dialog.save()
     return {
-        'address': dialog.data['address'],
-        'number': dialog.data['number'],
+        'address': dialog.address,
+        'number': dialog.number,
         'curency': purse.curency.name,
         'ammount': purse.ammount,
         'services': [service for service in Service.objects.all()]
@@ -82,17 +82,37 @@ def step4_db(telegram_id: int, service_id: int):
     if dialog.step != 4:
         raise WrongStep
     dialog.step = 5
-    dialog.data['service']: service_id
-    dialog.save()
-    purse = get_or_create_purse(dialog.telegram_id)
+    dialog.curency = Curency.objects.get(name__exact=DEFAULT_CURENCY)
+    purse = get_or_create_purse(dialog.telegram_id, dialog.curency)
     service = Service.objects.get(pk=service_id)
+    dialog.service = service
+    dialog.save()
     return {
-        'address': dialog.data['address'],
-        'number': dialog.data['number'],
+        'address': dialog.address,
+        'number': dialog.number,
         'curency': purse.curency.name,
         'ammount': purse.ammount,
         'service': service
     }
+
+
+@sync_to_async
+def get_dialog(telegram_id: int):
+    dialog = Dialog.objects.get(pk=telegram_id)
+    return dialog.serialize()
+
+
+@sync_to_async
+def create_order(telegram_id: int):
+    dialog = Dialog.objects.get(pk=telegram_id)
+    try:
+        order = Order.create_order(dialog.telegram_id, dialog.service, dialog.curency, number=dialog.number,
+                                   address=dialog.address)
+        return True, order
+    except OrderException as m:
+        return False, None
+    except BackendException as m:
+        return False, None
 
 # db_file = os.path.abspath('db.sqlite3')
 # from rr_telebot.tortoise_models import *

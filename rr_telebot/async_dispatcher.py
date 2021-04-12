@@ -5,7 +5,7 @@ from aiogram.dispatcher.middlewares import BaseMiddleware
 from loguru import logger
 
 from rr_backend.test_backend import async_backend as backend
-from rr_telebot.database_handler import create_user, new_dialog, step2_db, step3_db, get_curent_step, step4_db
+from rr_telebot.database_handler import create_user, new_dialog, step2_db, step3_db, get_curent_step, step4_db, get_dialog, create_order
 from rr_telebot.template_message import *
 
 API_TOKEN = os.environ.get('API_TOKEN')
@@ -61,7 +61,7 @@ async def step3_handler(call: types.CallbackQuery):
         i += 1
         button = types.InlineKeyboardButton(text=service.button_lable, callback_data=service.id)
         keyboard.row(button)
-        variants_line = variants_line + variant_line.format(i=i, name=service.short_name, price=service.price) + '\n'
+        variants_line = variants_line + variant_line.format(i=i, name=service.short_name, price=service.base_price) + '\n'
     await call.message.answer(
         (step3_message.format(**curent_data) + '\n' + variants_line + purse_message.format(**curent_data)),
         reply_markup=keyboard)
@@ -78,13 +78,39 @@ async def step4_handler(call: types.CallbackQuery):
     message = step4_message.format(address=curent_data['address'],
                                    number=curent_data['number'],
                                    service=curent_data['service'].name,
-                                   price=curent_data['service'].price)
+                                   price=curent_data['service'].base_price)
     purse = purse_message.format(**curent_data)
     keyboard = types.InlineKeyboardMarkup()
     yes = types.InlineKeyboardButton(text=yes_label, callback_data='yes')
     no = types.InlineKeyboardButton(text=no_label, callback_data='no')
     keyboard.add(yes, no)
     await call.message.answer(message + '\n' + purse, reply_markup=keyboard)
+
+
+async def filter_step5(call: types.CallbackQuery):
+    return await get_curent_step(call.from_user.id) == 5
+
+
+@dp.callback_query_handler(filter_step5)
+async def step5_handler(call: types.CallbackQuery):
+    await call.message.delete_reply_markup()
+    dialog = await get_dialog(call.from_user.id)
+    if call.data == 'yes':
+        if not dialog['check_ammount']:
+            keyboard = types.InlineKeyboardMarkup()
+            url = types.InlineKeyboardButton(text='Пополнить', url='http://127.0.0.1')
+            next_button = types.InlineKeyboardButton(text=next_lable, callback_data='yes')
+            keyboard.add(url, next_button)
+            await call.message.answer(not_anought_message.format(**dialog), reply_markup=keyboard)
+        else:
+            created, order = await create_order(call.from_user.id)
+            if created:
+                await call.message.answer(order_created_message.format(number=order.number))
+            else:
+                await call.message.answer(order_not_created_message)
+    else:
+        await new_dialog(call.from_user.id)
+
 
 
 @dp.message_handler()
