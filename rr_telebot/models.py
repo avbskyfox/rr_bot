@@ -18,6 +18,7 @@ class Dialog(models.Model):
     curency = models.ForeignKey(Curency, on_delete=models.CASCADE, verbose_name='Валюта', null=True)
     number = models.CharField(max_length=30, verbose_name='Кадастровый номер', blank=True)
     address = models.CharField(max_length=255, verbose_name='Строка адреса', blank=True)
+    dadata = models.JSONField(max_length=4096, verbose_name='Данные дадата', null=True)
 
     def serialize(self):
         purse = self.telegram_id.purse_set.get(curency=self.curency)

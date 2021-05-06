@@ -1,6 +1,6 @@
 import telebot
 import json
-from rr_backend.test_backend import TestBackend
+from rr_backend.t_backend import TestBackend
 import os
 import django
 from telebot import apihelper

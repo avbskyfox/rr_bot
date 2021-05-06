@@ -1,4 +1,6 @@
 django
-python-telegram-bot
-pytelegrambotapi
+aiohttp
 loguru
+aiogram
+yarl
+twisted

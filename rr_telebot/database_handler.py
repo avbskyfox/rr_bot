@@ -4,7 +4,6 @@ import django
 
 os.environ["DJANGO_SETTINGS_MODULE"] = 'rosreestr.settings'
 django.setup()
-from django.conf import settings
 from asgiref.sync import sync_to_async
 from cabinet.models import *
 from rr_telebot.models import *
@@ -36,6 +35,31 @@ def new_dialog(telegram_id: int):
     dialog, created = Dialog.objects.get_or_create(pk=telegram_id)
     if not created:
         dialog.flush()
+    return dialog
+
+
+@sync_to_async
+def save_dadata_varinants(telegram_id: int, dadata):
+    dialog, created = Dialog.objects.get_or_create(pk=telegram_id)
+    if not created:
+        dialog.flush()
+    dialog.dadata = dadata
+    dialog.step = 1
+    dialog.save()
+
+
+@sync_to_async
+def pick_address(telegram_id: int, variant: int) -> Dialog:
+    try:
+        dialog = Dialog.objects.get(pk=telegram_id)
+    except Dialog.DoesNotExist:
+        raise WrongStep
+    if dialog.step != 1:
+        raise WrongStep
+    dialog.dadata = dialog.dadata[variant]
+    dialog.address = dialog.dadata['value']
+    dialog.step = 2
+    dialog.save()
     return dialog
 
 

@@ -1,51 +1,23 @@
-from rr_backend.backend_interface import RossreestrInterface
-import random
+from unittest import TestCase
+from rr_backend.backend import Backend
+from loguru import logger
+import asyncio
 
-random.seed()
-
-
-class TestBackend(RossreestrInterface):
-    def address_by_number(self, nuber):
-        return {'success': 1, 'data': {'number': '22:11:2134:1234', 'address': 'Екатеринбург, ул. Ленина д. 1'}}
-
-    def number_by_address(self, address):
-        rnd = random.randint(1, 2)
-        if rnd == 1:
-            return {'success': 1, 'data': {'number': '22:11:2134:1234', 'address': 'Екатеринбург, ул. Ленина д. 1'}}
-        elif rnd == 2:
-            return {'success': 0, 'data': None, 'message': 'Слишком много вариантов, уточните адресс'}
-
-    def get_type1(self, query):
-        return {'success': True, 'message': 'сообщение об успехе', 'data': {'number': 1234}}
-
-    def get_type2(self, query):
-        return {'success': True, 'message': 'сообщение об успехе',  'data': {'number': 1234}}
+address_list = ['Балаково харьковская 23', 'Балаково ленина 2']
+numbers_list = ['']
 
 
-class AsyncTestBackend(RossreestrInterface):
-    async def address_by_number(self, nuber):
-        return {'success': 1, 'data': {'number': '22:11:2134:1234', 'address': 'Екатеринбург, ул. Ленина д. 1'}}
-
-    async def number_by_address(self, address):
-        rnd = random.randint(1, 2)
-        if rnd == 1:
-            return {'success': 1, 'data': {'number': '22:11:2134:1234', 'address': 'Екатеринбург, ул. Ленина д. 1'}}
-        elif rnd == 2:
-            return {'success': 0, 'data': None, 'message': 'Слишком много вариантов, уточните адресс'}
-
-    def get_type1(self, query):
-        return {'success': True, 'message': 'сообщение об успехе', 'data': {'number': 1234}}
-
-    def get_type2(self, query):
-        return {'success': True, 'message': 'сообщение об успехе',  'data': {'number': 1234}}
-
-
-async_backend = AsyncTestBackend()
-
-
-def get_type1(**kwargs):
-    return async_backend.get_type1(kwargs['number'])
-
-
-def get_type2(**kwargs):
-    return async_backend.get_type2(kwargs['number'])
+class TestBackend(TestCase):
+    def test_find_adress(self):
+        loop = asyncio.get_event_loop()
+        for address in address_list:
+            result = loop.run_until_complete(Backend.async_find_adress(address))
+            for item in result:
+                self.assertIn('value', item)
+                self.assertIn('data', item)
+    #
+    # def test_objects_by_address(self):
+    #     self.fail()
+    #
+    # def test_object_by_number(self):
+    #     self.fail()

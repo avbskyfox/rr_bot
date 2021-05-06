@@ -2,10 +2,11 @@ import os
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.middlewares import BaseMiddleware
-from loguru import logger
 
-from rr_backend.test_backend import async_backend as backend
-from rr_telebot.database_handler import create_user, new_dialog, step2_db, step3_db, get_curent_step, step4_db, get_dialog, create_order
+from rr_backend.backend import Backend
+from rr_backend.t_backend import async_backend as t_backend
+from rr_telebot.database_handler import create_user, new_dialog, step2_db, step3_db, get_curent_step, step4_db, \
+    get_dialog, create_order, save_dadata_varinants, pick_address
 from rr_telebot.template_message import *
 
 API_TOKEN = os.environ.get('API_TOKEN')
@@ -33,9 +34,40 @@ async def start_handler(message: types.Message):
     await message.answer(start_message, reply_markup=keyboard)
 
 
+@dp.message_handler(content_types=['text'], regexp=".* .* .*")
+async def address_handler(message: types.Message):
+    dadata = await Backend.async_find_adress(message.text)
+    if len(dadata) == 0:
+        await message.answer(address_not_found)
+    elif len(dadata) >= 4:
+        await message.answer(too_many_addresses)
+    else:
+        await save_dadata_varinants(message.from_user.id, dadata)
+        keyboard = types.InlineKeyboardMarkup()
+        buttons = list()
+        text = str()
+        for i, item in enumerate(dadata):
+            button = types.InlineKeyboardButton(f'{i+1}', callback_data=i)
+            buttons.append(button)
+            text += item['value'] + '\n'
+        keyboard.row(*buttons)
+        await message.answer(text, reply_markup=keyboard)
+
+
+async def filter_step1(call: types.CallbackQuery):
+    return await get_curent_step(call.from_user.id) == 1
+
+
+@dp.callback_query_handler(filter_step1)
+async def pick_address_handler(call: types.CallbackQuery):
+    await call.message.delete()
+    dialog = await pick_address(call.from_user.id, int(call.data))
+    await call.message.answer(dialog.dadata['value'])
+
+
 @dp.message_handler(content_types=['text'], regexp="^(\d\d):(\d\d):*")
 async def address_by_number_handler(message: types.Message):
-    response = await backend.address_by_number(message.text)
+    response = await t_backend.address_by_number(message.text)
     dialog = await new_dialog(message.from_user.id)
     if not response['success']:
         await message.answer(number_not_found_message)
@@ -61,7 +93,8 @@ async def step3_handler(call: types.CallbackQuery):
         i += 1
         button = types.InlineKeyboardButton(text=service.button_lable, callback_data=service.id)
         keyboard.row(button)
-        variants_line = variants_line + variant_line.format(i=i, name=service.short_name, price=service.base_price) + '\n'
+        variants_line = variants_line + variant_line.format(i=i, name=service.short_name,
+                                                            price=service.base_price) + '\n'
     await call.message.answer(
         (step3_message.format(**curent_data) + '\n' + variants_line + purse_message.format(**curent_data)),
         reply_markup=keyboard)
@@ -112,9 +145,8 @@ async def step5_handler(call: types.CallbackQuery):
         await new_dialog(call.from_user.id)
 
 
-
-@dp.message_handler()
-async def address_by_number_handler(message: types.Message):
+@dp.message_handler
+async def any_message_handler(message: types.Message):
     await message.answer(help_message)
 
 

@@ -1,5 +1,7 @@
 help_message = 'Help message'
 help_label = 'Help'
+address_not_found = 'address not found'
+too_many_addresses = 'plese conrete address'
 purse_message = 'U have: {ammount} {curency}'
 purse_lable = 'Purse'
 register_message = '{}, U\'re registred'
