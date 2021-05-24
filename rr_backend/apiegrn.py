@@ -1,5 +1,6 @@
 import aiohttp
 import os
+import json
 
 
 APIEGRN_TOKEN = os.environ.get('APIEGRN_TOKEN')
@@ -28,4 +29,5 @@ class ApiEgrnClient:
         }
         async with aiohttp.ClientSession() as session:
             async with session.post(INFO_URL, json=data, headers=headers) as response:
-                return await response.json()
+                text = await response.text()
+                return json.loads(text)

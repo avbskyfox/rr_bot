@@ -1,4 +1,5 @@
 import os
+from loguru import logger
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.middlewares import BaseMiddleware
@@ -39,19 +40,20 @@ async def address_handler(message: types.Message):
     dadata = await Backend.async_find_adress(message.text)
     if len(dadata) == 0:
         await message.answer(address_not_found)
-    elif len(dadata) >= 4:
-        await message.answer(too_many_addresses)
+    # elif len(dadata) >= 4:
+    #     await message.answer(too_many_addresses)
     else:
         await save_dadata_varinants(message.from_user.id, dadata)
         keyboard = types.InlineKeyboardMarkup()
-        buttons = list()
-        text = str()
-        for i, item in enumerate(dadata):
-            button = types.InlineKeyboardButton(f'{i+1}', callback_data=i)
-            buttons.append(button)
-            text += item['value'] + '\n'
-        keyboard.row(*buttons)
-        await message.answer(text, reply_markup=keyboard)
+        # buttons = list()
+        # text = str()
+        # for i, item in enumerate(dadata):
+        #     button = types.InlineKeyboardButton(f'{i+1}', callback_data=i)
+        #     buttons.append(button)
+        #     text += item['value'] + '\n'
+        button = types.InlineKeyboardButton(text=next_lable, callback_data='0')
+        keyboard.row(button)
+        await message.answer(dadata[0]['value'], reply_markup=keyboard)
 
 
 async def filter_step1(call: types.CallbackQuery):
@@ -62,7 +64,20 @@ async def filter_step1(call: types.CallbackQuery):
 async def pick_address_handler(call: types.CallbackQuery):
     await call.message.delete()
     dialog = await pick_address(call.from_user.id, int(call.data))
-    await call.message.answer(dialog.dadata['value'])
+    results = await Backend.async_objects_by_address(dialog.dadata)
+    logger.debug(results)
+    text = str()
+    buttons = []
+    for i, result in enumerate(results):
+        logger.debug(result)
+        text += f'\nОбъект {i}'
+        buttons.append(types.InlineKeyboardButton(text=f'Объект {i}', callback_data=result['EGRN']['object']['CADNOMER']))
+        for key, value in result['EGRN']['details'].items():
+            text += f'\n{key}: {value}'
+    keyboard = types.InlineKeyboardMarkup()
+    for button in buttons:
+        keyboard.add(button)
+    await call.message.answer(text, reply_markup=keyboard)
 
 
 @dp.message_handler(content_types=['text'], regexp="^(\d\d):(\d\d):*")
@@ -145,8 +160,9 @@ async def step5_handler(call: types.CallbackQuery):
         await new_dialog(call.from_user.id)
 
 
-@dp.message_handler
+@dp.message_handler(content_types=['text'])
 async def any_message_handler(message: types.Message):
+    logger.debug(message.text)
     await message.answer(help_message)
 
 

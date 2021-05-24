@@ -49,7 +49,7 @@ def save_dadata_varinants(telegram_id: int, dadata):
 
 
 @sync_to_async
-def pick_address(telegram_id: int, variant: int) -> Dialog:
+def pick_address(telegram_id: int, variant: int):
     try:
         dialog = Dialog.objects.get(pk=telegram_id)
     except Dialog.DoesNotExist:

@@ -17,3 +17,4 @@ no_label = 'No'
 not_anought_message = 'U have {purse_ammount}, need {service[base_price]}'
 order_created_message = 'Order {number} is created'
 order_not_created_message = 'Cannot create order'
+

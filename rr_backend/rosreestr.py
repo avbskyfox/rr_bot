@@ -29,9 +29,12 @@ class RosreestrClient:
 
             async with session.get(URL(url, encoded=True)) as response:
                 logger.debug(response.request_info)
+                logger.debug(await response.text())
+                logger.debug(response.status)
                 js = await response.json()
-                s = json.dumps(js, ensure_ascii=False, indent=3)
-                logger.debug(s)
+                result = json.dumps(js, ensure_ascii=False, indent=3)
+                logger.debug(result)
+        return js
 
     @classmethod
     async def _get_reg(cls, session: aiohttp.ClientSession, dadata_query):
