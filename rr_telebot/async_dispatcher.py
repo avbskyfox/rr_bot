@@ -7,7 +7,7 @@ from aiogram.dispatcher.middlewares import BaseMiddleware
 from rr_backend.backend import Backend
 from rr_backend.t_backend import async_backend as t_backend
 from rr_telebot.database_handler import create_user, new_dialog, step2_db, step3_db, get_curent_step, step4_db, \
-    get_dialog, create_order, save_dadata_varinants, pick_address
+    get_dialog, create_order, save_dadata_varinants, pick_address, save_data_to_dialog
 from rr_telebot.template_message import *
 
 API_TOKEN = os.environ.get('API_TOKEN')
@@ -28,11 +28,47 @@ class RegisterUserMiddleware(BaseMiddleware):
 
 @dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
+    logger.debug('start')
+    # keyboard = types.ReplyKeyboardMarkup()
+    # help_button = types.KeyboardButton(help_label)
+    # purse_button = types.KeyboardButton(purse_lable)
+    # keyboard.add(help_button, purse_button)
+    keyboard = types.InlineKeyboardMarkup()
+    join_button = types.InlineKeyboardButton(text=join_lable, callback_data='join')
+    keyboard.add(join_button)
+    await message.answer(start_message, reply_markup=keyboard)
+
+
+def join_filter(call: types.CallbackQuery):
+    return call.data == 'join'
+
+
+@dp.callback_query_handler(join_filter)
+async def join_handler(call: types.CallbackQuery):
+    await call.message.delete()
     keyboard = types.ReplyKeyboardMarkup()
     help_button = types.KeyboardButton(help_label)
+    gift_button = types.KeyboardButton(gift_label)
+    account_button = types.KeyboardButton(account_label)
     purse_button = types.KeyboardButton(purse_lable)
-    keyboard.add(help_button, purse_button)
-    await message.answer(start_message, reply_markup=keyboard)
+    keyboard.add(help_button, account_button)
+    keyboard.add(gift_button, purse_button)
+    await call.message.answer(messagr_after_join, reply_markup=keyboard)
+
+
+@dp.message_handler(content_types=['text'], regexp=gift_label)
+async def gift_handler(message: types.Message):
+    await message.answer('not implemented')
+
+
+@dp.message_handler(content_types=['text'], regexp=account_label)
+async def account_handler(message: types.Message):
+    await message.answer('not implemented')
+
+
+@dp.message_handler(content_types=['text'], regexp=purse_lable)
+async def purse_handler(message: types.Message):
+    await message.answer('not implemented')
 
 
 @dp.message_handler(content_types=['text'], regexp=".* .* .*")
@@ -65,15 +101,19 @@ async def pick_address_handler(call: types.CallbackQuery):
     await call.message.delete()
     dialog = await pick_address(call.from_user.id, int(call.data))
     results = await Backend.async_objects_by_address(dialog.dadata)
+    await save_data_to_dialog(call.from_user.id, results)
     logger.debug(results)
     text = str()
     buttons = []
     for i, result in enumerate(results):
         logger.debug(result)
-        text += f'\nОбъект {i}'
-        buttons.append(types.InlineKeyboardButton(text=f'Объект {i}', callback_data=result['EGRN']['object']['CADNOMER']))
-        for key, value in result['EGRN']['details'].items():
-            text += f'\n{key}: {value}'
+        text += f'\nОбъект {i+1}:'
+        buttons.append(types.InlineKeyboardButton(text=f'Объект {i+1}', callback_data=i))
+        # for key, value in result['EGRN']['details'].items():
+        #     text += f'\n{key}: {value}'
+        text += f"\n{result['EGRN']['object']['CADNOMER']} - {result['EGRN']['object']['ADDRESS']}"
+        text += f"\nСтатус объекта: {result['EGRN']['details']['Статус объекта']}\n" or 'Неизвестно\n'
+
     keyboard = types.InlineKeyboardMarkup()
     for button in buttons:
         keyboard.add(button)

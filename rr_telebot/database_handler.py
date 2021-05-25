@@ -49,6 +49,12 @@ def save_dadata_varinants(telegram_id: int, dadata):
 
 
 @sync_to_async
+def save_data_to_dialog(telegram_id, data):
+    dialog, created = Dialog.objects.get_or_create(pk=telegram_id)
+    dialog.data = data
+    dialog.save()
+
+@sync_to_async
 def pick_address(telegram_id: int, variant: int):
     try:
         dialog = Dialog.objects.get(pk=telegram_id)
