@@ -6,7 +6,7 @@ from aiogram.dispatcher.middlewares import BaseMiddleware
 
 from rr_backend.backend import Backend
 from rr_backend.t_backend import async_backend as t_backend
-from rr_telebot.database_handler import create_user, new_dialog, step2_db, step3_db, get_curent_step, step4_db, \
+from rr_telebot.database_handler import create_user, new_dialog, get_curent_step, step4_db, \
     get_dialog, create_order, save_dadata_varinants, pick_address, save_data_to_dialog
 from rr_telebot.template_message import *
 
