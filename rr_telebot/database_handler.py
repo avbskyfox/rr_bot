@@ -19,6 +19,8 @@ class WrongStep(Exception):
 def create_user(username: str, telegram_id: int):
     user, created = User.objects.get_or_create(username=username, telegram_id=telegram_id)
     if created:
+        curency = Curency.objects.get(name__exact=DEFAULT_CURENCY)
+        purse, _ = Purse.objects.get_or_create(curency=curency, user=user)
         user.save()
     return user, created
 
@@ -54,6 +56,7 @@ def save_data_to_dialog(telegram_id, data):
     dialog.data = data
     dialog.save()
 
+
 @sync_to_async
 def pick_address(telegram_id: int, variant: int):
     try:
@@ -69,32 +72,24 @@ def pick_address(telegram_id: int, variant: int):
     return dialog
 
 
-@sync_to_async
-def step2_db(dialog: Dialog, number: str, address: str):
-    dialog.number = number
-    dialog.address = address
-    dialog.step = 3
-    dialog.save()
-
-
-@sync_to_async
-def step3_db(telegram_id: int):
-    try:
-        dialog = Dialog.objects.get(pk=telegram_id)
-    except Dialog.DoesNotExist:
-        raise WrongStep
-    if dialog.step != 3:
-        raise WrongStep
-    purse = get_or_create_purse(dialog.telegram_id)
-    dialog.step = 4
-    dialog.save()
-    return {
-        'address': dialog.address,
-        'number': dialog.number,
-        'curency': purse.curency.name,
-        'ammount': purse.ammount,
-        'services': [service for service in Service.objects.all()]
-    }
+# @sync_to_async
+# def step3_db(telegram_id: int):
+#     try:
+#         dialog = Dialog.objects.get(pk=telegram_id)
+#     except Dialog.DoesNotExist:
+#         raise WrongStep
+#     if dialog.step != 3:
+#         raise WrongStep
+#     purse = get_or_create_purse(dialog.telegram_id)
+#     dialog.step = 4
+#     dialog.save()
+#     return {
+#         'address': dialog.address,
+#         'number': dialog.number,
+#         'curency': purse.curency.name,
+#         'ammount': purse.ammount,
+#         'services': [service for service in Service.objects.all()]
+#     }
 
 
 @sync_to_async
@@ -129,7 +124,7 @@ def step4_db(telegram_id: int, service_id: int):
 @sync_to_async
 def get_dialog(telegram_id: int):
     dialog = Dialog.objects.get(pk=telegram_id)
-    return dialog.serialize()
+    return dialog
 
 
 @sync_to_async

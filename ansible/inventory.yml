@@ -1,0 +1,4 @@
+all:
+  hosts:
+    terragent.ru:
+      ansible_user: web

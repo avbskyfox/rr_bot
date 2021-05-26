@@ -81,12 +81,6 @@ async def address_handler(message: types.Message):
     else:
         await save_dadata_varinants(message.from_user.id, dadata)
         keyboard = types.InlineKeyboardMarkup()
-        # buttons = list()
-        # text = str()
-        # for i, item in enumerate(dadata):
-        #     button = types.InlineKeyboardButton(f'{i+1}', callback_data=i)
-        #     buttons.append(button)
-        #     text += item['value'] + '\n'
         button = types.InlineKeyboardButton(text=next_lable, callback_data='0')
         keyboard.row(button)
         await message.answer(dadata[0]['value'], reply_markup=keyboard)
@@ -118,6 +112,21 @@ async def pick_address_handler(call: types.CallbackQuery):
     for button in buttons:
         keyboard.add(button)
     await call.message.answer(text, reply_markup=keyboard)
+
+
+async def filter_step2(call: types.CallbackQuery):
+    return await get_curent_step(call.from_user.id) == 2
+
+
+@dp.callback_query_handler(filter_step2)
+async def object_info_handler(call: types.CallbackQuery):
+    await call.message.delete()
+    dialog = await get_dialog(call.from_user.id)
+    result = dialog.data[int(call.data)]
+    text = str()
+    for key, value in result['EGRN']['details'].items():
+        text += f'\n{key}: {value}'
+    await call.message.answer(text)
 
 
 @dp.message_handler(content_types=['text'], regexp="^(\d\d):(\d\d):*")
