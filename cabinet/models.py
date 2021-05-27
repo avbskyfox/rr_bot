@@ -1,7 +1,8 @@
-from django.db import models
-from django.contrib.auth.models import AbstractUser
-from django.conf import settings
 import importlib
+
+from django.conf import settings
+from django.contrib.auth.models import AbstractUser
+from django.db import models
 from django.db import transaction
 
 
@@ -63,6 +64,7 @@ class Service(models.Model):
     class Meta:
         verbose_name = 'Услуга'
         verbose_name_plural = 'Услуги'
+
     name = models.CharField(max_length=1000, verbose_name='Название услуги')
     short_name = models.CharField(max_length=100, verbose_name='Короткое название')
     button_lable = models.CharField(max_length=20, verbose_name='Кнопка в телегеграм')
@@ -71,7 +73,7 @@ class Service(models.Model):
     base_price = models.IntegerField(verbose_name='Цена')
     coefficient = models.FloatField(verbose_name='Скидочный коэфициент')
 
-    def get_price(self, curency: Curency):
+    def get_price(self):
         return self.base_price
 
     def check_ammount(self, user: User, curency: Curency):
@@ -82,7 +84,8 @@ class Service(models.Model):
     def price_list(cls):
         result = list()
         for service in cls.objects.all():
-            result.append({'service': service.short_name, 'price': service.price})
+            result.append({'id': service.id, 'name': service.name, 'short_name': service.short_name,
+                           'price': service.get_price()})
         result.sort(key=lambda item: item['price'])
         return result
 
@@ -90,7 +93,7 @@ class Service(models.Model):
         return {
             'name': self.name,
             'short_name': self.short_name,
-            'base_price': self.base_price,
+            'price': self.get_price(),
         }
 
     def __str__(self):

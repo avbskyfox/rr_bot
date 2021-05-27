@@ -14,7 +14,8 @@ class RosreestrClient:
         connector = aiohttp.TCPConnector()
         async with aiohttp.ClientSession(connector=connector) as session:
             params = await cls._get_settl(session, dadata)
-            params['street'] = dadata['data']['street']
+            logger.debug(params)
+            params['street'] = str(dadata['data']['street'])
             params['house'] = dadata['data']['house']
             if dadata['data']['flat']:
                 params['apartment'] = dadata['data']['flat']

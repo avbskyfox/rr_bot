@@ -72,7 +72,8 @@ class Backend:
 
     @staticmethod
     async def async_object_by_number(number: str):
-        pass
+        logger.debug(number)
+        return await ApiEgrnClient.get_info(number)
 
     @staticmethod
     def get_doc_type1(query):

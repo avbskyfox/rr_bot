@@ -128,6 +128,11 @@ def get_dialog(telegram_id: int):
 
 
 @sync_to_async
+def save_dialog(dialog: Dialog):
+    dialog.save()
+
+
+@sync_to_async
 def create_order(telegram_id: int):
     dialog = Dialog.objects.get(pk=telegram_id)
     try:
@@ -139,40 +144,8 @@ def create_order(telegram_id: int):
     except BackendException as m:
         return False, None
 
-# db_file = os.path.abspath('db.sqlite3')
-# from rr_telebot.tortoise_models import *
-# from tortoise import Tortoise
-# @asynccontextmanager
-# async def db_connection():
-#     await Tortoise.init(
-#         db_url=f'sqlite://{db_file}',
-#         modules={'models': ['rr_telebot.tortoise_models']}
-#     )
-#     try:
-#         yield None
-#     finally:
-#         await Tortoise.close_connections()
-#
-#
-# def create_user(username: str, telegram_id: int):
-#     async with db_connection():
-#         user, created = await User.get_or_create(username=username, telegram_id=telegram_id)
-#         if created:
-#             await user.save()
-#         return user, created
-#
-#
-# async def new_dialog(telegram_id: int):
-#     async with db_connection():
-#         user = await User.get(telegram_id=telegram_id)
-#         dialog, created = await Dialog.get_or_create(telegram_id=user.id)
-#         if not created:
-#             await dialog.flush()
-#         return dialog
-#
-#
-# async def step2(dialog: Dialog, number, address):
-#     dialog.data['number'] = number
-#     dialog.data['address'] = address
-#     async with db_connection():
-#         await dialog.save()
+
+@sync_to_async
+def get_price_list():
+    result = Service.price_list()
+    return result

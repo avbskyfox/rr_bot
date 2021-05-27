@@ -15,7 +15,4 @@ class DadataClient:
         async with aiohttp.ClientSession() as session:
             async with session.post(DADATA_URL, json={'query': addr_string}, headers=headers) as response:
                 variants = await response.json()
-                logger.debug(variants)
-                for var in variants['suggestions']:
-                    logger.debug(var['value'])
                 return variants['suggestions']

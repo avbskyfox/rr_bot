@@ -3,7 +3,7 @@ from rr_backend.backend import Backend
 from loguru import logger
 import asyncio
 
-address_list = ['Балаково харьковская 23', 'Балаково ленина 2']
+address_list = ['Свердловская область, г. Новоуральск, ул. Ленина, д. 67, кв. 3']
 numbers_list = ['']
 
 

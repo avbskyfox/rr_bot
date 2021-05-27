@@ -5,8 +5,7 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.middlewares import BaseMiddleware
 
 from rr_backend.backend import Backend
-from rr_backend.t_backend import async_backend as t_backend
-from rr_telebot.database_handler import create_user, new_dialog, get_curent_step, step4_db, \
+from rr_telebot.database_handler import create_user, new_dialog, get_curent_step, get_price_list, save_dialog, \
     get_dialog, create_order, save_dadata_varinants, pick_address, save_data_to_dialog
 from rr_telebot.template_message import *
 
@@ -101,10 +100,8 @@ async def pick_address_handler(call: types.CallbackQuery):
     buttons = []
     for i, result in enumerate(results):
         logger.debug(result)
-        text += f'\nОбъект {i+1}:'
-        buttons.append(types.InlineKeyboardButton(text=f'Объект {i+1}', callback_data=i))
-        # for key, value in result['EGRN']['details'].items():
-        #     text += f'\n{key}: {value}'
+        text += f'\nОбъект {i + 1}:'
+        buttons.append(types.InlineKeyboardButton(text=f'Объект {i + 1}', callback_data=i))
         text += f"\n{result['EGRN']['object']['CADNOMER']} - {result['EGRN']['object']['ADDRESS']}"
         text += f"\nСтатус объекта: {result['EGRN']['details']['Статус объекта']}\n" or 'Неизвестно\n'
 
@@ -112,6 +109,21 @@ async def pick_address_handler(call: types.CallbackQuery):
     for button in buttons:
         keyboard.add(button)
     await call.message.answer(text, reply_markup=keyboard)
+
+
+async def print_full_info(message: types.Message, dialog, result):
+    text = str()
+    for key, value in result['EGRN']['details'].items():
+        text += f'\n{key}: {value}'
+    price_list = await get_price_list()
+    keyboard = types.InlineKeyboardMarkup()
+    for price in price_list:
+        button = types.InlineKeyboardButton(text=f'{price["short_name"]} за {price["price"]}',
+                                            callback_data=price['id'])
+        keyboard.add(button)
+    dialog.step = 3
+    await save_dialog(dialog)
+    await message.answer(text, reply_markup=keyboard)
 
 
 async def filter_step2(call: types.CallbackQuery):
@@ -123,90 +135,15 @@ async def object_info_handler(call: types.CallbackQuery):
     await call.message.delete()
     dialog = await get_dialog(call.from_user.id)
     result = dialog.data[int(call.data)]
-    text = str()
-    for key, value in result['EGRN']['details'].items():
-        text += f'\n{key}: {value}'
-    await call.message.answer(text)
+    await print_full_info(call.message, dialog, result)
 
 
 @dp.message_handler(content_types=['text'], regexp="^(\d\d):(\d\d):*")
 async def address_by_number_handler(message: types.Message):
-    response = await t_backend.address_by_number(message.text)
     dialog = await new_dialog(message.from_user.id)
-    if not response['success']:
-        await message.answer(number_not_found_message)
-    else:
-        await step2_db(dialog, response['data']['number'], response['data']['address'])
-        keyboard = types.InlineKeyboardMarkup()
-        next_button = types.InlineKeyboardButton(text=next_lable, callback_data='step3')
-        keyboard.add(next_button)
-        await message.answer(text=step2_message.format(response['data']['address']), reply_markup=keyboard)
-
-
-def filter_step3(call: types.CallbackQuery):
-    return call.data == 'step3'
-
-
-@dp.callback_query_handler(filter_step3)
-async def step3_handler(call: types.CallbackQuery):
-    await call.message.delete_reply_markup()
-    curent_data = await step3_db(call.from_user.id)
-    keyboard = types.InlineKeyboardMarkup()
-    variants_line = ''
-    for i, service in enumerate(curent_data['services']):
-        i += 1
-        button = types.InlineKeyboardButton(text=service.button_lable, callback_data=service.id)
-        keyboard.row(button)
-        variants_line = variants_line + variant_line.format(i=i, name=service.short_name,
-                                                            price=service.base_price) + '\n'
-    await call.message.answer(
-        (step3_message.format(**curent_data) + '\n' + variants_line + purse_message.format(**curent_data)),
-        reply_markup=keyboard)
-
-
-async def filter_step4(call: types.CallbackQuery):
-    return await get_curent_step(call.from_user.id) == 4
-
-
-@dp.callback_query_handler(filter_step4)
-async def step4_handler(call: types.CallbackQuery):
-    await call.message.delete_reply_markup()
-    curent_data = await step4_db(call.from_user.id, call.data)
-    message = step4_message.format(address=curent_data['address'],
-                                   number=curent_data['number'],
-                                   service=curent_data['service'].name,
-                                   price=curent_data['service'].base_price)
-    purse = purse_message.format(**curent_data)
-    keyboard = types.InlineKeyboardMarkup()
-    yes = types.InlineKeyboardButton(text=yes_label, callback_data='yes')
-    no = types.InlineKeyboardButton(text=no_label, callback_data='no')
-    keyboard.add(yes, no)
-    await call.message.answer(message + '\n' + purse, reply_markup=keyboard)
-
-
-async def filter_step5(call: types.CallbackQuery):
-    return await get_curent_step(call.from_user.id) == 5
-
-
-@dp.callback_query_handler(filter_step5)
-async def step5_handler(call: types.CallbackQuery):
-    await call.message.delete_reply_markup()
-    dialog = await get_dialog(call.from_user.id)
-    if call.data == 'yes':
-        if not dialog['check_ammount']:
-            keyboard = types.InlineKeyboardMarkup()
-            url = types.InlineKeyboardButton(text='Пополнить', url='http://127.0.0.1')
-            next_button = types.InlineKeyboardButton(text=next_lable, callback_data='yes')
-            keyboard.add(url, next_button)
-            await call.message.answer(not_anought_message.format(**dialog), reply_markup=keyboard)
-        else:
-            created, order = await create_order(call.from_user.id)
-            if created:
-                await call.message.answer(order_created_message.format(number=order.number))
-            else:
-                await call.message.answer(order_not_created_message)
-    else:
-        await new_dialog(call.from_user.id)
+    result = await Backend.async_object_by_number(message.text)
+    dialog.data = result
+    await print_full_info(message, dialog, result)
 
 
 @dp.message_handler(content_types=['text'])
