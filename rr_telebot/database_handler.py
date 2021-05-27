@@ -99,26 +99,18 @@ def get_curent_step(telegram_id: int):
 
 
 @sync_to_async
-def step4_db(telegram_id: int, service_id: int):
+def pick_service(telegram_id: int, service_id: int):
     try:
         dialog = Dialog.objects.get(pk=telegram_id)
     except Dialog.DoesNotExist:
         raise WrongStep
-    if dialog.step != 4:
-        raise WrongStep
-    dialog.step = 5
+    dialog.step = 4
     dialog.curency = Curency.objects.get(name__exact=DEFAULT_CURENCY)
-    purse = get_or_create_purse(dialog.telegram_id, dialog.curency)
+    get_or_create_purse(dialog.telegram_id, dialog.curency)
     service = Service.objects.get(pk=service_id)
     dialog.service = service
     dialog.save()
-    return {
-        'address': dialog.address,
-        'number': dialog.number,
-        'curency': purse.curency.name,
-        'ammount': purse.ammount,
-        'service': service
-    }
+    return service.check_ammount(dialog.telegram_id, dialog.curency), dialog
 
 
 @sync_to_async

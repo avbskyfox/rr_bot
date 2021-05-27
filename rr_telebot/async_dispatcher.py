@@ -7,6 +7,7 @@ from aiogram.dispatcher.middlewares import BaseMiddleware
 from rr_backend.backend import Backend
 from rr_telebot.database_handler import create_user, new_dialog, get_curent_step, get_price_list, save_dialog, \
     get_dialog, create_order, save_dadata_varinants, pick_address, save_data_to_dialog
+from rr_telebot import database_handler
 from rr_telebot.template_message import *
 
 API_TOKEN = os.environ.get('API_TOKEN')
@@ -45,7 +46,7 @@ def join_filter(call: types.CallbackQuery):
 @dp.callback_query_handler(join_filter)
 async def join_handler(call: types.CallbackQuery):
     await call.message.delete()
-    keyboard = types.ReplyKeyboardMarkup()
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     help_button = types.KeyboardButton(help_label)
     gift_button = types.KeyboardButton(gift_label)
     account_button = types.KeyboardButton(account_label)
@@ -140,10 +141,34 @@ async def object_info_handler(call: types.CallbackQuery):
 
 @dp.message_handler(content_types=['text'], regexp="^(\d\d):(\d\d):*")
 async def address_by_number_handler(message: types.Message):
+    process_message = await message.answer('trying to find...')
     dialog = await new_dialog(message.from_user.id)
     result = await Backend.async_object_by_number(message.text)
     dialog.data = result
+    await process_message.delete()
     await print_full_info(message, dialog, result)
+
+
+async def filter_step3(call: types.CallbackQuery):
+    return await get_curent_step(call.from_user.id) == 3
+
+
+@dp.callback_query_handler(filter_step3)
+async def pick_serice(call: types.CallbackQuery):
+    await call.message.delete()
+    process_message = await call.message.answer('Check your money...')
+    money_enoght, dialog = await database_handler.pick_service(call.from_user.id, int(call.data))
+    await process_message.delete()
+    if money_enoght:
+        keyboard = types.InlineKeyboardMarkup()
+        next_button = types.InlineKeyboardButton(next_lable, callback_data='confirm')
+        keyboard.add(next_button)
+        await call.message.answer(
+            f'adress: {dialog.address}\nservice:{dialog.service.name}\nprice{dialog.service.base_price}',
+            reply_markup=keyboard
+        )
+    else:
+        await call.message.answer('Not enoght money')
 
 
 @dp.message_handler(content_types=['text'])
