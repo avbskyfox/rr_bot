@@ -181,6 +181,7 @@ async def filter_step4(call: types.CallbackQuery):
 @dp.callback_query_handler(filter_step4)
 async def create_order_handler(call: types.CallbackQuery):
     if call.data == 'confirm':
+        await call.message.delete()
         created, order = await create_order(call.from_user.id)
         if created:
             await call.message.answer('order created')
