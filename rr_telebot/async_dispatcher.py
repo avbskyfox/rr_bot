@@ -186,7 +186,7 @@ async def create_order_handler(call: types.CallbackQuery):
             await call.message.answer('order created')
         else:
             await call.message.answer('can not create order')
-        await database_handler.new_dialog()
+        await database_handler.new_dialog(call.from_user.id)
 
 
 @dp.message_handler(content_types=['text'])
