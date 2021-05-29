@@ -125,6 +125,6 @@ STATIC_URL = '/static/'
 
 AUTH_USER_MODEL = 'cabinet.User'
 
-BACKEND = 'rr_backend.test_backend'
+BACKEND = 'rr_backend.t_backend'
 
 DEFAULT_CURENCY = 'RUR'

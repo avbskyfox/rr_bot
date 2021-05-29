@@ -138,6 +138,16 @@ def create_order(telegram_id: int):
 
 
 @sync_to_async
+def get_account_info(telegram_id: int):
+    user = User.objects.get(telegram_id=telegram_id)
+    return {
+        'Ваш ID': user.telegram_id,
+        'Вы с нами с': user.date_joined.strftime('%d.%m.%Y'),
+        'Баланс': user.purse_set.get(curency__name=settings.DEFAULT_CURENCY).ammount,
+    }
+
+
+@sync_to_async
 def get_price_list():
     result = Service.price_list()
     return result

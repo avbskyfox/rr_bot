@@ -1,5 +1,4 @@
 import os
-from loguru import logger
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.middlewares import BaseMiddleware
@@ -28,11 +27,6 @@ class RegisterUserMiddleware(BaseMiddleware):
 
 @dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
-    logger.debug('start')
-    # keyboard = types.ReplyKeyboardMarkup()
-    # help_button = types.KeyboardButton(help_label)
-    # purse_button = types.KeyboardButton(purse_lable)
-    # keyboard.add(help_button, purse_button)
     keyboard = types.InlineKeyboardMarkup()
     join_button = types.InlineKeyboardButton(text=join_lable, callback_data='join')
     keyboard.add(join_button)
@@ -63,7 +57,18 @@ async def gift_handler(message: types.Message):
 
 @dp.message_handler(content_types=['text'], regexp=account_label)
 async def account_handler(message: types.Message):
-    await message.answer('not implemented')
+    info_dict = await database_handler.get_account_info(message.from_user.id)
+    text = str()
+    keyboard = types.InlineKeyboardMarkup()
+    top_up_balance = types.InlineKeyboardButton(text=top_up_balance_lable, callback_data='refill')
+    orders = types.InlineKeyboardButton(text=orders_lable, callback_data='orders')
+    referal = types.InlineKeyboardButton(text=referal_label, callback_data='referal')
+    keyboard.add(top_up_balance)
+    keyboard.add(orders)
+    keyboard.add(referal)
+    for key, value in info_dict.items():
+        text += f'{key}: {value}\n'
+    await message.answer(text, reply_markup=keyboard)
 
 
 @dp.message_handler(content_types=['text'], regexp=purse_lable)
@@ -76,8 +81,6 @@ async def address_handler(message: types.Message):
     dadata = await Backend.async_find_adress(message.text)
     if len(dadata) == 0:
         await message.answer(address_not_found)
-    # elif len(dadata) >= 4:
-    #     await message.answer(too_many_addresses)
     else:
         await save_dadata_varinants(message.from_user.id, dadata)
         keyboard = types.InlineKeyboardMarkup()
@@ -96,11 +99,9 @@ async def pick_address_handler(call: types.CallbackQuery):
     dialog = await pick_address(call.from_user.id, int(call.data))
     results = await Backend.async_objects_by_address(dialog.dadata)
     await save_data_to_dialog(call.from_user.id, results)
-    logger.debug(results)
     text = str()
     buttons = []
     for i, result in enumerate(results):
-        logger.debug(result)
         text += f'\nОбъект {i + 1}:'
         buttons.append(types.InlineKeyboardButton(text=f'Объект {i + 1}', callback_data=i))
         text += f"\n{result['EGRN']['object']['CADNOMER']} - {result['EGRN']['object']['ADDRESS']}"
@@ -160,6 +161,8 @@ async def pick_serice(call: types.CallbackQuery):
     money_enoght, dialog = await database_handler.pick_service(call.from_user.id, int(call.data))
     await process_message.delete()
     if money_enoght:
+        dialog.step = 4
+        await save_dialog(dialog)
         keyboard = types.InlineKeyboardMarkup()
         next_button = types.InlineKeyboardButton(next_lable, callback_data='confirm')
         keyboard.add(next_button)
@@ -171,9 +174,23 @@ async def pick_serice(call: types.CallbackQuery):
         await call.message.answer('Not enoght money')
 
 
+async def filter_step4(call: types.CallbackQuery):
+    return await get_curent_step(call.from_user.id) == 4
+
+
+@dp.callback_query_handler(filter_step4)
+async def create_order_handler(call: types.CallbackQuery):
+    if call.data == 'confirm':
+        created, order = await create_order(call.from_user.id)
+        if created:
+            await call.message.answer('order created')
+        else:
+            await call.message.answer('can not create order')
+        await database_handler.new_dialog()
+
+
 @dp.message_handler(content_types=['text'])
 async def any_message_handler(message: types.Message):
-    logger.debug(message.text)
     await message.answer(help_message)
 
 
