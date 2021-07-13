@@ -1,17 +1,12 @@
-import requests
-import aiohttp
-import os
 from loguru import logger
-import asyncio
-from yarl import URL
-import json
+
+from rr_backend.apiegrn import ApiEgrnClient
 from rr_backend.dadata import DadataClient
 from rr_backend.rosreestr import RosreestrClient
-from rr_backend.apiegrn import ApiEgrnClient
+from rr_backend.basen import BasenClient
 
 
 class Backend:
-
     @staticmethod
     async def async_find_adress(address: str):
         variants = await DadataClient.find_address(address)
@@ -76,11 +71,22 @@ class Backend:
         return await ApiEgrnClient.get_info(number)
 
     @staticmethod
-    def get_doc_type1(query):
-        pass
+    def get_doc_type1(cadnum):
+        return BasenClient.order_docs(cadnum, 'object_info')
 
     @staticmethod
-    def get_doc_type2(self, query):
-        pass
+    def get_doc_type2(cadnum):
+        return BasenClient.order_docs(cadnum, 'ownership')
 
+    @staticmethod
+    def get_doc_status(doc_number):
+        return BasenClient.check_status(doc_number)
 
+    @staticmethod
+    async def async_get_doc_status(doc_number):
+        return await BasenClient.async_check_status(doc_number)
+
+    @staticmethod
+    def download_doc(doc_number):
+        return {'pdf': BasenClient.get_excerpt(doc_number, 'pdf'),
+                'zip': BasenClient.get_excerpt(doc_number, 'zip')}

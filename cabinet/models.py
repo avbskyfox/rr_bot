@@ -1,9 +1,12 @@
 import importlib
+from asgiref.sync import sync_to_async
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db import transaction
+from rr_backend.backend import Backend
+from notifiers.smtp import send_mail
 
 
 # Create your models here.
@@ -115,14 +118,13 @@ class Order(models.Model):
     price = models.IntegerField(verbose_name='Цена', null=True)
 
     @classmethod
-    @transaction.atomic()
+    @transaction.atomic
     def create_order(cls, user: User, service: Service, curency: Curency, **kwargs):
         order = Order.objects.create()
         if not service.check_ammount(user, curency):
             raise OrderException('not enough money')
         for excerpt_type in service.excerpt_types_set.all():
             result = cls._backend_request(excerpt_type, **kwargs)
-            print(result)
             if not result['success']:
                 raise BackendException(result['message'])
             excerpt = Excerpt.objects.create()
@@ -131,6 +133,8 @@ class Order(models.Model):
             excerpt.type = excerpt_type
             excerpt.user = user
             excerpt.order = order
+            excerpt.foreign_number = result['number']
+            excerpt.row_data = result['raw']
             excerpt.save()
         purse = user.purse_set.filter(curency=curency).first()
         order.user = user
@@ -147,6 +151,22 @@ class Order(models.Model):
         func = getattr(module, excerpt_type.backend_function)
         return func(**kwargs)
 
+    def get_info(self):
+        return {
+            'number': self.number,
+            'excerpts': [
+                {
+                    'address': excerpt.address,
+                    'number': excerpt.number,
+                    'date': excerpt.date_created.strftime('%d.%m.%Y'),
+                    'name': excerpt.type.name,
+                    'delivered': excerpt.is_delivered,
+                    'excerpt': excerpt
+                }
+                for excerpt in self.excerpt_set.all()
+            ]
+        }
+
     def __str__(self):
         return str(self.number)
 
@@ -160,8 +180,38 @@ class Excerpt(models.Model):
     type = models.ForeignKey(ExcerptType, on_delete=models.SET_NULL, null=True, verbose_name='Тип выписки')
     address = models.CharField(max_length=1024, verbose_name='Адрес объекта')
     number = models.CharField(max_length=20, verbose_name='Кадастровый номер объекта')
-    date_created = models.DateField(auto_now_add=True)
+    date_created = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    foreign_number = models.CharField(max_length=128, verbose_name='Номер выписки в сервисе партнера')
+    row_data = models.JSONField(max_length=1024, verbose_name='Сырые данные ответа партнера', null=True, default=None)
     order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, verbose_name='Заказ')
+    is_ready = models.BooleanField(default=False, verbose_name='Готова к отправке?')
+    is_delivered = models.BooleanField(default=False, verbose_name='Отправлена?')
+
+    @transaction.atomic
+    def check_status(self):
+        result = Backend.get_doc_status(self.foreign_number)
+        if result['status'] == 'ready':
+            self.is_ready = True
+            self.send_docs()
+            self.save()
+            return True
+
+    def download_docs(self):
+        return Backend.download_doc(self.foreign_number)
+
+    def send_docs(self):
+        send_mail(to_addr=self.user.email,
+                  subject=f'Выписки к заказу № {self.order.number}',
+                  text='Ваши выписки готовы',
+                  files=self.download_docs())
+
+    @sync_to_async
+    def async_send_docs(self):
+        return self.send_docs()
+
+    @sync_to_async
+    def async_check_status(self):
+        return self.check_status()
 
     def __str__(self):
         return f'{self.order_id}_{self.type_id}'

@@ -2,6 +2,7 @@ from unittest import TestCase
 from rr_backend.backend import Backend
 from loguru import logger
 import asyncio
+from rr_backend.basen import BasenClient
 
 address_list = ['Свердловская область, г. Новоуральск, ул. Ленина, д. 67, кв. 3']
 numbers_list = ['']
@@ -21,3 +22,10 @@ class TestBackend(TestCase):
     #
     # def test_object_by_number(self):
     #     self.fail()
+
+    def test_get_excerpt(self):
+        query_num = '53b4e764-b7f0-dc81-a731-9b5a83dc41dfa5fc0316'
+        data = BasenClient.get_excerpt(query_num)
+        logger.debug(data)
+        with open('excerpt2.pdf', 'wb') as f:
+            f.write(data)

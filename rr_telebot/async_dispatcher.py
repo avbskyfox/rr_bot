@@ -2,11 +2,12 @@ import os
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.middlewares import BaseMiddleware
+from loguru import logger
 
 from rr_backend.backend import Backend
+from rr_telebot import database_handler
 from rr_telebot.database_handler import create_user, new_dialog, get_curent_step, get_price_list, save_dialog, \
     get_dialog, create_order, save_dadata_varinants, pick_address, save_data_to_dialog
-from rr_telebot import database_handler
 from rr_telebot.template_message import *
 
 API_TOKEN = os.environ.get('API_TOKEN')
@@ -69,6 +70,26 @@ async def account_handler(message: types.Message):
     for key, value in info_dict.items():
         text += f'{key}: {value}\n'
     await message.answer(text, reply_markup=keyboard)
+
+
+def orders_filter(call: types.CallbackQuery):
+    return call.data == 'orders'
+
+
+@dp.callback_query_handler(orders_filter)
+async def orders_handler(call: types.CallbackQuery):
+    await call.message.delete()
+    text = str()
+    for order in await database_handler.orders_info(call.from_user.id):
+        text += '############\n'
+        text += f'Заказ № {order["number"]}:\n\n'
+        for excerpt in order['excerpts']:
+            ready = await excerpt['excerpt'].async_check_status()
+            text += f'{excerpt["name"]} от {excerpt["date"]} для \"{excerpt["address"]}\"\n ' \
+                    f'{"ОТПРАВЛЕНА" if ready else "НЕ ГОТОВА"}\n\n'
+        text += '\n'
+
+    await call.message.answer(text)
 
 
 @dp.message_handler(content_types=['text'], regexp=purse_lable)
@@ -137,6 +158,10 @@ async def object_info_handler(call: types.CallbackQuery):
     await call.message.delete()
     dialog = await get_dialog(call.from_user.id)
     result = dialog.data[int(call.data)]
+    dialog.address = result['EGRN']['object']['ADDRESS']
+    dialog.number = result['EGRN']['object']['CADNOMER']
+    dialog.data = result
+    await save_dialog(dialog)
     await print_full_info(call.message, dialog, result)
 
 
@@ -186,6 +211,7 @@ async def create_order_handler(call: types.CallbackQuery):
         if created:
             await call.message.answer('order created')
         else:
+            logger.error(order)
             await call.message.answer('can not create order')
         await database_handler.new_dialog(call.from_user.id)
 

@@ -132,9 +132,16 @@ def create_order(telegram_id: int):
                                    address=dialog.address)
         return True, order
     except OrderException as m:
-        return False, None
+        return False, m
     except BackendException as m:
-        return False, None
+        return False, m
+
+
+@sync_to_async
+def orders_info(telegram_id: int):
+    return [
+        order.get_info() for order in User.objects.get(telegram_id=telegram_id).order_set.all()
+    ]
 
 
 @sync_to_async
