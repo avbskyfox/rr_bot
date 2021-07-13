@@ -7,7 +7,7 @@ from loguru import logger
 from rr_backend.backend import Backend
 from rr_telebot import database_handler
 from rr_telebot.database_handler import create_user, new_dialog, get_curent_step, get_price_list, save_dialog, \
-    get_dialog, create_order, save_dadata_varinants, pick_address, save_data_to_dialog
+    get_dialog, create_order, save_dadata_varinants, pick_address, save_data_to_dialog, update_email
 from rr_telebot.template_message import *
 
 API_TOKEN = os.environ.get('API_TOKEN')
@@ -64,9 +64,11 @@ async def account_handler(message: types.Message):
     top_up_balance = types.InlineKeyboardButton(text=top_up_balance_lable, callback_data='refill')
     orders = types.InlineKeyboardButton(text=orders_lable, callback_data='orders')
     referal = types.InlineKeyboardButton(text=referal_label, callback_data='referal')
+    change_email = types.InlineKeyboardButton(text=change_email_label, callback_data='change_email')
     keyboard.add(top_up_balance)
     keyboard.add(orders)
     keyboard.add(referal)
+    keyboard.add(change_email)
     for key, value in info_dict.items():
         text += f'{key}: {value}\n'
     await message.answer(text, reply_markup=keyboard)
@@ -95,6 +97,22 @@ async def orders_handler(call: types.CallbackQuery):
 @dp.message_handler(content_types=['text'], regexp=purse_lable)
 async def purse_handler(message: types.Message):
     await message.answer('not implemented')
+
+
+def change_email_filter(call: types.CallbackQuery):
+    return call.data == 'change_email'
+
+
+@dp.callback_query_handler(change_email_filter)
+async def change_email_handler(call: types.CallbackQuery):
+    await call.message.delete()
+    await call.message.answer('Just input your email now or anytime else, it will be changed')
+
+
+@dp.message_handler(content_types=['text'], regexp=r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
+async def email_string_handler(message: types.Message):
+    await update_email(message.from_user.id, message.text)
+    await message.answer(f'Your email has been changed to {message.text}')
 
 
 @dp.message_handler(content_types=['text'], regexp=".* .* .*")

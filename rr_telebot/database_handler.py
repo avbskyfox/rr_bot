@@ -155,6 +155,13 @@ def get_account_info(telegram_id: int):
 
 
 @sync_to_async
+def update_email(telegram_id: int, email: str):
+    user = User.objects.get(telegram_id=telegram_id)
+    user.email = email
+    user.save()
+
+
+@sync_to_async
 def get_price_list():
     result = Service.price_list()
     return result
