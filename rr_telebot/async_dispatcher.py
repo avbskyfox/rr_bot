@@ -111,8 +111,8 @@ async def change_email_handler(call: types.CallbackQuery):
 
 @dp.message_handler(content_types=['text'], regexp=r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
 async def email_string_handler(message: types.Message):
-    await update_email(message.from_user.id, message.text)
-    await message.answer(f'Your email has been changed to {message.text}')
+    await update_email(message.from_user.id, message.text.lower())
+    await message.answer(f'Your email has been changed to {message.text.lower()}')
 
 
 @dp.message_handler(content_types=['text'], regexp=".* .* .*")

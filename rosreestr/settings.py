@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'cabinet.apps.CabinetConfig',
-    'rr_telebot.apps.RrTelebotConfig'
+    'rr_telebot.apps.RrTelebotConfig',
+    'tinkoff_kassa.apps.TinkoffKassaConfig'
 ]
 
 MIDDLEWARE = [
@@ -129,3 +130,6 @@ AUTH_USER_MODEL = 'cabinet.User'
 BACKEND = 'rr_backend.basen'
 
 DEFAULT_CURENCY = 'RUR'
+
+TINKOFF_TERMINAL = '1612788237813DEMO'
+TINKOFF_PASSWORD = 'vo426ws3bdyur4cg'

@@ -6,3 +6,4 @@ rosreestr/__pycache__/
 /.idea/
 cabinet/migrations/*
 rr_telebot/migrations/*
+*/_trial_temp/
