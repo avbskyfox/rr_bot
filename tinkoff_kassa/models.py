@@ -8,19 +8,20 @@ from tinkoff_kassa.tinkoff_urls import *
 
 
 class PaymentModel(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING, related_name='payments')
     terminal_key = models.TextField(verbose_name='Идентификатор терминала', max_length=20)
     amount = models.IntegerField(verbose_name='Сумма (коп.)')
     order_id = models.TextField(verbose_name='Идентификатор заказа у прдавца', max_length=36)
     status = models.TextField(verbose_name='Статус платежа', max_length=20)
     payment_id = models.IntegerField(verbose_name='Идентификатор платежа в системе банка')
     payment_url = models.URLField(verbose_name='Ссылка на платежную форму', blank=True)
+    is_confirmed = models.BooleanField(default=False)
+    is_canceled = models.BooleanField(default=False)
 
     def __str__(self):
         return self.order_id
 
     @staticmethod
-    def create_payment(user: settings.AUTH_USER_MODEL, params: dict):
+    def create_payment(params: dict):
         params['TerminalKey'] = settings.TINKOFF_TERMINAL
         params['Token'] = generate_token(params)
         response = requests.post(init_url, json=params)
@@ -30,7 +31,6 @@ class PaymentModel(models.Model):
         if not data['Success']:
             raise PaymentCreationError({'params': params, 'data': data})
         payment = PaymentModel(
-            user=user,
             terminal_key=data.get('TerminalKey', ''),
             amount=data.get('Amount', 0),
             order_id=data.get('OrderId', ''),
@@ -38,6 +38,7 @@ class PaymentModel(models.Model):
             payment_id=data.get('PaymentId', 0),
             payment_url=data.get('PaymentURL', ''),
         )
+        payment.save()
         return payment
 
     def finish_authorise(self):
@@ -57,6 +58,7 @@ class PaymentModel(models.Model):
             raise PaymentCancelError({'params': params, 'data': data})
         self.status = data['Status']
         self.amount = data['NewAmount']
+        self.is_canceled = True
         self.save()
 
     def get_state(self):
@@ -72,6 +74,10 @@ class PaymentModel(models.Model):
         self.success = data['Success']
         self.error_code = data['ErrorCode']
         self.message = data['Message']
+        if self.status == 'CONFIRMED':
+            self.is_confirmed = True
+        if self.status == 'CANCELED':
+            self.is_canceled = True
         self.save()
 
     def resend(self):

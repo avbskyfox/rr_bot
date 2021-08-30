@@ -2,9 +2,11 @@ import os
 
 import django
 
+
+
 os.environ["DJANGO_SETTINGS_MODULE"] = 'rosreestr.settings'
 django.setup()
-from asgiref.sync import sync_to_async
+
 from cabinet.models import *
 from rr_telebot.models import *
 
@@ -165,3 +167,46 @@ def update_email(telegram_id: int, email: str):
 def get_price_list():
     result = Service.price_list()
     return result
+
+
+@sync_to_async
+def start_balance_dialog(telegram_id: int):
+    dialog, _ = BalanceDialog.objects.get_or_create(pk=telegram_id)
+    if dialog.step == 0:
+        dialog.step = 1
+        dialog.save()
+        return {'is_new': True}
+    else:
+        if dialog.bill:
+            return {'is_new': False,
+                    'payment_url': 'http://127.0.0.1',
+                    'price': '',
+                    'inner_amount': '',
+                    'inner_curency': ''}
+        else:
+            dialog.step = 1
+            dialog.save()
+            return {'is_new': True}
+
+
+@sync_to_async
+def check_step1(telegram_id: int):
+    dialog, _ = BalanceDialog.objects.get_or_create(pk=telegram_id)
+    return dialog.step == 1
+
+
+@sync_to_async
+def balance_dialog_step1(telegram_id: int, amount):
+    dialog, _ = BalanceDialog.objects.get_or_create(pk=telegram_id)
+    dialog.step = 2
+    curency = Curency.objects.get(name=settings.DEFAULT_CURENCY)
+    dialog.bill = Bill.objects.create(user=dialog.user,
+                                      curency=curency,
+                                      amount=int(amount*100),
+                                      price=amount*curency.course)
+    dialog.save()
+
+
+@sync_to_async
+def save_balance_dialog(dialog: BalanceDialog):
+    dialog.save()

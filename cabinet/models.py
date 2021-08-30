@@ -8,6 +8,9 @@ from django.db import transaction
 from rr_backend.backend import Backend
 from notifiers.smtp import send_mail
 
+from tinkoff_kassa.models import PaymentModel
+
+
 
 # Create your models here.
 
@@ -22,6 +25,9 @@ class BackendException(Exception):
 
 class User(AbstractUser):
     telegram_id = models.CharField(max_length=100, blank=True, db_index=True, unique=True)
+
+    def __str__(self):
+        return f'{self.telegram_id}'
 
 
 class Curency(models.Model):
@@ -215,3 +221,66 @@ class Excerpt(models.Model):
 
     def __str__(self):
         return f'{self.order_id}_{self.type_id}'
+
+
+class Bill(models.Model):
+    class Meta:
+        verbose_name = 'Счет'
+        verbose_name_plural = 'Счета'
+
+    user = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_index=True, verbose_name='Пользователь')
+    curency = models.ForeignKey(Curency, on_delete=models.DO_NOTHING, verbose_name='Внутренняя валюта')
+    amount = models.IntegerField(verbose_name='Кол-во внутренней валюты')
+    price = models.IntegerField(verbose_name='Цена в копейках')
+    payment = models.ForeignKey(PaymentModel, on_delete=models.SET_NULL, null=True, default=None)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_payed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'{self.user} - {self.amount} {self.curency}'
+
+    def create_payment(self):
+        params = {
+            "Amount": str(self.price),
+            "OrderId": str(self.id),
+            "Description": f"Покупка внутренней валюты в колиестве: {self.amount}",
+            "Receipt": {
+                "Email": self.user.email,
+                "Taxation": "osn",
+                "Items": [
+                    {
+                        "Name": "1",
+                        "Price": self.price,
+                        "Quantity": 1.00,
+                        "Amount": self.price,
+                        "PaymentMethod": "full_prepayment",
+                        "PaymentObject": "service",
+                        "Tax": "vat10"
+                    }
+                ]
+            }
+        }
+        self.payment = PaymentModel.create_payment(params)
+        self.save()
+
+    @transaction.atomic
+    def update_payment(self):
+        if self.payment is not None:
+            self.payment.get_state()
+            if self.payment.is_confirmed:
+                self.is_payed = True
+                self.save()
+                purse = self.user.purse_set.get(curency=self.curency)
+                purse.ammount += self.amount/100
+                purse.save()
+            if self.payment.is_canceled:
+                self.delete()
+        else:
+            self.delete()
+            # purse = self.user.purse_set.get(curency=self.curency)
+            # purse.ammount += self.amount
+            # purse.save()
+
+    def cancel_payment(self):
+        self.payment.cancel()
+        self.save()

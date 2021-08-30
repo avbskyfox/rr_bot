@@ -96,7 +96,11 @@ async def orders_handler(call: types.CallbackQuery):
 
 @dp.message_handler(content_types=['text'], regexp=purse_lable)
 async def purse_handler(message: types.Message):
-    await message.answer('not implemented')
+    info = await database_handler.get_account_info(message.from_user.id)
+    keyboard = types.InlineKeyboardMarkup()
+    button = types.InlineKeyboardButton(text=top_up_balance_lable, callback_data='refill')
+    keyboard.add(button)
+    await message.answer(f'Ваш баланс: {info["Баланс"]}', reply_markup=keyboard)
 
 
 def change_email_filter(call: types.CallbackQuery):
@@ -234,9 +238,37 @@ async def create_order_handler(call: types.CallbackQuery):
         await database_handler.new_dialog(call.from_user.id)
 
 
-@dp.message_handler(content_types=['text'])
-async def any_message_handler(message: types.Message):
-    await message.answer(help_message)
+# @dp.message_handler(content_types=['text'])
+# async def any_message_handler(message: types.Message):
+#     await message.answer(help_message)
+
+
+@dp.callback_query_handler()
+async def top_up_balance_handler(call: types.CallbackQuery):
+    result = await database_handler.BalanceDialog.async_resolv(call)
+    logger.debug(result)
+    if result is not None:
+        if len(result[1]) > 0:
+            keyboard = types.InlineKeyboardMarkup()
+            for item in result[1]:
+                keyboard.row(types.InlineKeyboardButton(text=item['text'], callback_data=item['callback']))
+            await call.message.answer(result[0], reply_markup=keyboard)
+        else:
+            await call.message.answer(result[0])
+
+
+@dp.message_handler()
+async def take_amount_handler(message: types.Message):
+    result = await database_handler.BalanceDialog.async_resolv(message)
+    logger.debug(result)
+    if result is not None:
+        if len(result[1]) > 0:
+            keyboard = types.InlineKeyboardMarkup()
+            for item in result[1]:
+                keyboard.row(types.InlineKeyboardButton(text=item['text'], callback_data=item['callback']))
+            await message.answer(result[0], reply_markup=keyboard)
+        else:
+            await message.answer(result[0])
 
 
 def main():

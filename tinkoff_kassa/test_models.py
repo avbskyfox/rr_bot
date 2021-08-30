@@ -39,7 +39,7 @@ class TestPaymentModel(TestCase):
                 ]
             }
         }
-        payment = PaymentModel.create_payment(self.user, params)
+        payment = PaymentModel.create_payment(params)
         payment.save()
         self.assertEqual(payment.status, 'NEW')
         return payment
