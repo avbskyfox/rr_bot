@@ -1,3 +1,4 @@
+import datetime
 import importlib
 from asgiref.sync import sync_to_async
 
@@ -119,9 +120,22 @@ class Order(models.Model):
     def number(self):
         return self.id
 
+    @property
+    def is_finished(self):
+        exerpt_set = self.excerpt_set.all()
+        for exerpt in exerpt_set:
+            if not exerpt.is_delivered:
+                return True
+        return False
+
+    @property
+    def address(self):
+        return self.excerpt_set.first().address
+
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     service = models.ForeignKey(Service, on_delete=models.SET_NULL, null=True, verbose_name='Услуга')
     price = models.IntegerField(verbose_name='Цена', null=True)
+    date_created = models.DateTimeField(auto_now_add=True)
 
     @classmethod
     @transaction.atomic
@@ -172,6 +186,8 @@ class Order(models.Model):
                 for excerpt in self.excerpt_set.all()
             ]
         }
+
+
 
     def __str__(self):
         return str(self.number)

@@ -7,7 +7,7 @@ from loguru import logger
 from rr_backend.backend import Backend
 from rr_telebot import database_handler
 from rr_telebot.database_handler import create_user, new_dialog, get_curent_step, get_price_list, save_dialog, \
-    get_dialog, create_order, save_dadata_varinants, pick_address, save_data_to_dialog, update_email
+    get_dialog, create_order, save_dadata_varinants, pick_address, save_data_to_dialog
 from rr_telebot.template_message import *
 
 API_TOKEN = os.environ.get('API_TOKEN')
@@ -49,74 +49,6 @@ async def join_handler(call: types.CallbackQuery):
     keyboard.add(help_button, account_button)
     keyboard.add(gift_button, purse_button)
     await call.message.answer(messagr_after_join, reply_markup=keyboard)
-
-
-@dp.message_handler(content_types=['text'], regexp=gift_label)
-async def gift_handler(message: types.Message):
-    await message.answer('not implemented')
-
-
-@dp.message_handler(content_types=['text'], regexp=account_label)
-async def account_handler(message: types.Message):
-    info_dict = await database_handler.get_account_info(message.from_user.id)
-    text = str()
-    keyboard = types.InlineKeyboardMarkup()
-    top_up_balance = types.InlineKeyboardButton(text=top_up_balance_lable, callback_data='refill')
-    orders = types.InlineKeyboardButton(text=orders_lable, callback_data='orders')
-    referal = types.InlineKeyboardButton(text=referal_label, callback_data='referal')
-    change_email = types.InlineKeyboardButton(text=change_email_label, callback_data='change_email')
-    keyboard.add(top_up_balance)
-    keyboard.add(orders)
-    keyboard.add(referal)
-    keyboard.add(change_email)
-    for key, value in info_dict.items():
-        text += f'{key}: {value}\n'
-    await message.answer(text, reply_markup=keyboard)
-
-
-def orders_filter(call: types.CallbackQuery):
-    return call.data == 'orders'
-
-
-@dp.callback_query_handler(orders_filter)
-async def orders_handler(call: types.CallbackQuery):
-    await call.message.delete()
-    text = str()
-    for order in await database_handler.orders_info(call.from_user.id):
-        text += '############\n'
-        text += f'Заказ № {order["number"]}:\n\n'
-        for excerpt in order['excerpts']:
-            ready = await excerpt['excerpt'].async_check_status()
-            text += f'{excerpt["name"]} от {excerpt["date"]} для \"{excerpt["address"]}\"\n ' \
-                    f'{"ОТПРАВЛЕНА" if ready else "НЕ ГОТОВА"}\n\n'
-        text += '\n'
-
-    await call.message.answer(text)
-
-
-@dp.message_handler(content_types=['text'], regexp=purse_lable)
-async def purse_handler(message: types.Message):
-    info = await database_handler.get_account_info(message.from_user.id)
-    keyboard = types.InlineKeyboardMarkup()
-    button = types.InlineKeyboardButton(text=top_up_balance_lable, callback_data='refill')
-    keyboard.add(button)
-    await message.answer(f'Ваш баланс: {info["Баланс"]}', reply_markup=keyboard)
-
-
-def change_email_filter(call: types.CallbackQuery):
-    return call.data == 'change_email'
-
-
-@dp.callback_query_handler(change_email_filter)
-async def change_email_handler(call: types.CallbackQuery):
-    await call.message.delete()
-    await call.message.answer('Just input your email now or anytime else, it will be changed')
-
-
-@dp.message_handler(content_types=['text'], regexp=r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
-async def email_string_handler(message: types.Message):
-    await update_email(message.from_user.id, message.text.lower())
-    await message.answer(f'Your email has been changed to {message.text.lower()}')
 
 
 @dp.message_handler(content_types=['text'], regexp=".* .* .*")
@@ -238,37 +170,33 @@ async def create_order_handler(call: types.CallbackQuery):
         await database_handler.new_dialog(call.from_user.id)
 
 
-# @dp.message_handler(content_types=['text'])
-# async def any_message_handler(message: types.Message):
-#     await message.answer(help_message)
-
-
 @dp.callback_query_handler()
 async def top_up_balance_handler(call: types.CallbackQuery):
-    result = await database_handler.BalanceDialog.async_resolv(call)
-    logger.debug(result)
-    if result is not None:
-        if len(result[1]) > 0:
-            keyboard = types.InlineKeyboardMarkup()
-            for item in result[1]:
-                keyboard.row(types.InlineKeyboardButton(text=item['text'], callback_data=item['callback']))
-            await call.message.answer(result[0], reply_markup=keyboard)
-        else:
-            await call.message.answer(result[0])
+    await call.message.delete_reply_markup()
+    result = await database_handler.BalanceDialog.async_callback_resolv(call)
+    if not isinstance(result, list):
+        result = [result]
+    for item in result:
+        text, markup = item
+        logger.debug(text, markup)
+        if markup is not None:
+            await call.message.answer(text, reply_markup=markup, parse_mode='HTML')
+        elif text is not None:
+            await call.message.answer(text)
 
 
 @dp.message_handler()
 async def take_amount_handler(message: types.Message):
-    result = await database_handler.BalanceDialog.async_resolv(message)
-    logger.debug(result)
-    if result is not None:
-        if len(result[1]) > 0:
-            keyboard = types.InlineKeyboardMarkup()
-            for item in result[1]:
-                keyboard.row(types.InlineKeyboardButton(text=item['text'], callback_data=item['callback']))
-            await message.answer(result[0], reply_markup=keyboard)
-        else:
-            await message.answer(result[0])
+    result = await database_handler.BalanceDialog.async_message_resolv(message)
+    if not isinstance(result, list):
+        result = [result]
+    for item in result:
+        text, markup = item
+        logger.debug(text, markup)
+        if markup is not None:
+            await message.answer(text, reply_markup=markup, parse_mode='HTML')
+        elif text is not None:
+            await message.answer(text)
 
 
 def main():
