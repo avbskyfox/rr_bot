@@ -1,0 +1,2 @@
+class BillUnpayed(Exception):
+    pass

@@ -12,6 +12,12 @@ from notifiers.smtp import send_mail
 from tinkoff_kassa.models import PaymentModel
 
 
+from redis import Redis
+from redis.lock import Lock
+
+redis = Redis()
+
+
 
 # Create your models here.
 
@@ -279,23 +285,20 @@ class Bill(models.Model):
         self.payment = PaymentModel.create_payment(params)
         self.save()
 
-    @transaction.atomic
     def update_payment(self):
-        if self.payment is not None:
-            self.payment.get_state()
-            if self.payment.is_confirmed:
-                self.is_payed = True
-                self.save()
-                purse = self.user.purse_set.get(curency=self.curency)
-                purse.ammount += self.amount/100
-                purse.save()
-            if self.payment.is_canceled:
+        with Lock(redis, name=f'bill_{self.id}', timeout=10):
+            if self.payment is not None:
+                self.payment.get_state()
+                if self.payment.is_confirmed:
+                    self.is_payed = True
+                    self.save()
+                    purse = self.user.purse_set.get(curency=self.curency)
+                    purse.ammount += self.amount/100
+                    purse.save()
+                if self.payment.is_canceled:
+                    self.delete()
+            else:
                 self.delete()
-        else:
-            self.delete()
-            # purse = self.user.purse_set.get(curency=self.curency)
-            # purse.ammount += self.amount
-            # purse.save()
 
     def cancel_payment(self):
         self.payment.cancel()

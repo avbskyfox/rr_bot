@@ -1,12 +1,18 @@
-from loguru import logger
+import re
+
 from aiogram import types
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.db import models
-import re
+from loguru import logger
+
 
 from cabinet.models import User, Service, Curency, Bill, Order
 from tinkoff_kassa.models import PaymentModel
+from .tasks import update_bill_status
+
+
+
 
 
 class Dialog(models.Model):
@@ -55,6 +61,7 @@ class BalanceDialog(models.Model):
                                 primary_key=True)
     data = models.JSONField(null=True)
     resolver = models.TextField(max_length=32, null=True)
+    chat_id = None
 
     def flush(self):
         self.data = None
@@ -70,6 +77,7 @@ class BalanceDialog(models.Model):
         user_id = callback.from_user.id
         obj, _ = cls.objects.get_or_create(pk=user_id)
         data = callback.data
+        obj.chat_id = int(callback.message.chat.id)
         logger.debug(data)
 
         # refill dialog entry point
@@ -90,6 +98,7 @@ class BalanceDialog(models.Model):
         text = message.text
         logger.debug(text)
         obj, _ = cls.objects.get_or_create(pk=user_id)
+        obj.chat_id = int(message.chat.id)
 
         # help message entry point
         if text == 'Help':
@@ -158,7 +167,8 @@ class BalanceDialog(models.Model):
                                        amount=amount,
                                        price=amount * curency.course)
             bill.create_payment()
-            return f'{bill.payment.payment_url}', []
+            update_bill_status.delay(bill.id, self.chat_id)
+            return f'{bill.payment.payment_url}', None
 
     def input_help(self, text: str):
         self.flush()

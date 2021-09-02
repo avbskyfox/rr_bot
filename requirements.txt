@@ -4,3 +4,5 @@ loguru
 aiogram
 yarl
 twisted
+celery
+redis
