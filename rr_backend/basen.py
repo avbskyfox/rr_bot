@@ -1,12 +1,11 @@
-import os
-
 import aiohttp
 import requests
+from django.conf import settings
 from loguru import logger
 
-TOKEN = os.environ.get('BASE-N_TOKEN')
-APIEGRN_TOKEN = os.environ.get('APIEGRN_TOKEN')
-FGIS_EGRN_TOKEN = os.environ.get('FGIS_EGRN_TOKEN')
+TOKEN = settings.BASE_N_TOKEN
+APIEGRN_TOKEN = settings.APIEGRN_TOKEN
+FGIS_EGRN_TOKEN = settings.FGIS_EGRN_TOKEN
 
 BASE_URL = 'https://api-rosreestr.base-n.ru/rosreestr/api/'
 GET_BY_CADNUM_URL = 'get_by_cadnum/'

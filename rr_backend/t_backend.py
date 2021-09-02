@@ -1,7 +1,6 @@
-from unittest import TestCase
+import random
 
 from rr_backend.backend_interface import RossreestrInterface
-import random
 
 random.seed()
 
@@ -51,4 +50,3 @@ def get_type1(**kwargs):
 
 def get_type2(**kwargs):
     return async_backend.get_type2(kwargs['number'])
-

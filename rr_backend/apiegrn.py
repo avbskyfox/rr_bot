@@ -1,9 +1,9 @@
-import aiohttp
-import os
 import json
 
+import aiohttp
+from django.conf import settings
 
-APIEGRN_TOKEN = os.environ.get('APIEGRN_TOKEN')
+APIEGRN_TOKEN = settings.APIEGRN_TOKEN
 SEARCH_URL = 'https://apiegrn.ru/api/cadaster/search'
 INFO_URL = 'https://apiegrn.ru/api/cadaster/objectInfoFull'
 

@@ -1,8 +1,9 @@
 from celery import shared_task
 from cabinet.models import Bill
 from telebot import TeleBot
+from django.conf import settings
 
-bot = TeleBot(token='1715391513:AAEkJQfptLEOf-veUqgpLlKitQjKliUPRrs')
+bot = TeleBot(token=settings.TELEGRAM_API_TOKEN)
 
 
 @shared_task(default_retry_delay=5, max_retries=8)

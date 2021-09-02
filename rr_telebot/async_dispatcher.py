@@ -1,7 +1,6 @@
-import os
-
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.middlewares import BaseMiddleware
+from django.conf import settings
 from loguru import logger
 
 from rr_backend.backend import Backend
@@ -10,8 +9,8 @@ from rr_telebot.database_handler import create_user, new_dialog, get_curent_step
     get_dialog, create_order, save_dadata_varinants, pick_address, save_data_to_dialog
 from rr_telebot.template_message import *
 
-API_TOKEN = os.environ.get('API_TOKEN')
-bot = Bot(token=API_TOKEN)
+
+bot = Bot(token=settings.TELEGRAM_API_TOKEN)
 dp = Dispatcher(bot)
 
 
@@ -119,7 +118,7 @@ async def object_info_handler(call: types.CallbackQuery):
     await print_full_info(call.message, dialog, result)
 
 
-@dp.message_handler(content_types=['text'], regexp="^(\d\d):(\d\d):*")
+@dp.message_handler(content_types=['text'], regexp=r"^(\d\d):(\d\d):*")
 async def address_by_number_handler(message: types.Message):
     process_message = await message.answer('trying to find...')
     dialog = await new_dialog(message.from_user.id)
@@ -199,10 +198,11 @@ async def take_amount_handler(message: types.Message):
             await message.answer(text)
 
 
-def main():
+def start(loglevel='INFO'):
+    logger.level(loglevel)
     dp.middleware.setup(RegisterUserMiddleware())
     executor.start_polling(dp)
 
 
 if __name__ == '__main__':
-    main()
+    start()

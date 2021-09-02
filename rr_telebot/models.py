@@ -12,9 +12,6 @@ from tinkoff_kassa.models import PaymentModel
 from .tasks import update_bill_status
 
 
-
-
-
 class Dialog(models.Model):
     class Meta:
         verbose_name = 'Диалог'
@@ -61,7 +58,6 @@ class BalanceDialog(models.Model):
                                 primary_key=True)
     data = models.JSONField(null=True)
     resolver = models.TextField(max_length=32, null=True)
-    chat_id = None
 
     def flush(self):
         self.data = None
@@ -77,7 +73,6 @@ class BalanceDialog(models.Model):
         user_id = callback.from_user.id
         obj, _ = cls.objects.get_or_create(pk=user_id)
         data = callback.data
-        obj.chat_id = int(callback.message.chat.id)
         logger.debug(data)
 
         # refill dialog entry point
@@ -98,7 +93,6 @@ class BalanceDialog(models.Model):
         text = message.text
         logger.debug(text)
         obj, _ = cls.objects.get_or_create(pk=user_id)
-        obj.chat_id = int(message.chat.id)
 
         # help message entry point
         if text == 'Help':
@@ -127,7 +121,7 @@ class BalanceDialog(models.Model):
         return getattr(self, str(self.resolver), self.default_resolver)
 
     def default_resolver(self, data):
-        return 'Упс...\nВы тыкнули када то не туда)\nИли сказали что-то непонятное)\nНачните диалог заново.', None
+        return f'Упс...\nВы тыкнули када то не туда)\nИли сказали что-то непонятное)\nНачните диалог заново.', None
 
     def press_refill(self, data: str):
         self.flush()
@@ -167,7 +161,7 @@ class BalanceDialog(models.Model):
                                        amount=amount,
                                        price=amount * curency.course)
             bill.create_payment()
-            update_bill_status.delay(bill.id, self.chat_id)
+            update_bill_status.delay(bill.id, self.user.telegram_id)
             return f'{bill.payment.payment_url}', None
 
     def input_help(self, text: str):

@@ -7,3 +7,4 @@ rosreestr/__pycache__/
 cabinet/migrations/*
 rr_telebot/migrations/*
 */_trial_temp/
+tokens.ini

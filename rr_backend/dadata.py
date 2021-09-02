@@ -1,10 +1,7 @@
 import aiohttp
-import os
-from loguru import logger
-import asyncio
+from django.conf import settings
 
-
-DADATA_TOKEN = os.environ.get('DADATA_TOKEN')
+DADATA_TOKEN = settings.DADATA_TOKEN
 DADATA_URL = 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address'
 
 

@@ -1,22 +1,18 @@
-import datetime
 import importlib
-from asgiref.sync import sync_to_async
 
+from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db import transaction
-from rr_backend.backend import Backend
-from notifiers.smtp import send_mail
-
-from tinkoff_kassa.models import PaymentModel
-
-
 from redis import Redis
 from redis.lock import Lock
 
-redis = Redis()
+from notifiers.smtp import send_mail
+from rr_backend.backend import Backend
+from tinkoff_kassa.models import PaymentModel
 
+redis = Redis()
 
 
 # Create your models here.
@@ -162,6 +158,8 @@ class Order(models.Model):
             excerpt.foreign_number = result['number']
             excerpt.row_data = result['raw']
             excerpt.save()
+            from .tasks import update_exerpt_status
+            update_exerpt_status.delay(excerpt.id, user.telegram_id)
         purse = user.purse_set.filter(curency=curency).first()
         order.user = user
         order.service = service
@@ -193,8 +191,6 @@ class Order(models.Model):
             ]
         }
 
-
-
     def __str__(self):
         return str(self.number)
 
@@ -215,14 +211,14 @@ class Excerpt(models.Model):
     is_ready = models.BooleanField(default=False, verbose_name='Готова к отправке?')
     is_delivered = models.BooleanField(default=False, verbose_name='Отправлена?')
 
-    @transaction.atomic
     def check_status(self):
-        result = Backend.get_doc_status(self.foreign_number)
-        if result['status'] == 'ready':
-            self.is_ready = True
-            self.send_docs()
-            self.save()
-            return True
+        with Lock(redis, name=f'exerpt_{self.id}'):
+            result = Backend.get_doc_status(self.foreign_number)
+            if result['status'] == 'ready':
+                self.is_ready = True
+                self.send_docs()
+                self.save()
+                return True
 
     def download_docs(self):
         return Backend.download_doc(self.foreign_number)
@@ -293,7 +289,7 @@ class Bill(models.Model):
                     self.is_payed = True
                     self.save()
                     purse = self.user.purse_set.get(curency=self.curency)
-                    purse.ammount += self.amount/100
+                    purse.ammount += self.amount / 100
                     purse.save()
                 if self.payment.is_canceled:
                     self.delete()

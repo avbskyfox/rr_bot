@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 
 
 from pathlib import Path
+import configparser
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -135,5 +136,16 @@ BACKEND = 'rr_backend.basen'
 
 DEFAULT_CURENCY = 'RUR'
 
-TINKOFF_TERMINAL = '1612788237813DEMO'
-TINKOFF_PASSWORD = 'vo426ws3bdyur4cg'
+
+
+creds = configparser.ConfigParser()
+creds.read('tokens.ini')
+tokens = creds['TOKENS']
+
+TELEGRAM_API_TOKEN = tokens['TELEGRAM_API_TOKEN']
+DADATA_TOKEN = tokens['DADATA_TOKEN']
+APIEGRN_TOKEN = tokens['APIEGRN_TOKEN']
+BASE_N_TOKEN = tokens['BASE-N_TOKEN']
+FGIS_EGRN_TOKEN = tokens['FGIS_EGRN_TOKEN']
+TINKOFF_TERMINAL = tokens['TINKOFF_TERMINAL']
+TINKOFF_PASSWORD = tokens['TINKOFF_PASSWORD']
