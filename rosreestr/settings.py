@@ -10,7 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.1/ref/settings/
 """
 
-
+import os
 from pathlib import Path
 import configparser
 
@@ -23,10 +23,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '%^c%iu$vy8i^-e#@$cd2n*fxqugf)&!tdf@4p+9yg76bbgnx1d'
+SECRET_KEY = os.environ.get('SECRET_KEY', "%^c%iu$vy8i^-e#@$cd2n*fxqugf)&!tdf@4p+9yg76bbgnx1d")
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = bool(os.environ.get('DJANGO_DEBUG', True))
 
 ALLOWED_HOSTS = ['*']
 

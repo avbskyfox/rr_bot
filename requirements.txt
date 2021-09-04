@@ -6,3 +6,4 @@ yarl
 twisted
 celery
 redis
+daphne

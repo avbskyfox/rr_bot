@@ -3,6 +3,7 @@ from aiogram.dispatcher.middlewares import BaseMiddleware
 from django.conf import settings
 from loguru import logger
 
+
 from rr_backend.backend import Backend
 from rr_telebot import database_handler
 from rr_telebot.database_handler import create_user, new_dialog, get_curent_step, get_price_list, save_dialog, \
@@ -199,10 +200,10 @@ async def take_amount_handler(message: types.Message):
 
 
 def start(loglevel='INFO'):
-    logger.level(loglevel)
+    logger.add('bot.log', level=loglevel)
     dp.middleware.setup(RegisterUserMiddleware())
     executor.start_polling(dp)
 
 
 if __name__ == '__main__':
-    start()
+    start('DEBUG')
