@@ -78,6 +78,8 @@ class PaymentModel(models.Model):
             self.is_confirmed = True
         if self.status == 'CANCELED':
             self.is_canceled = True
+        if self.status == 'REJECTED':
+            self.is_canceled = True
         self.save()
 
     def resend(self):
