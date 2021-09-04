@@ -7,3 +7,6 @@ twisted
 celery
 redis
 daphne
+requests
+python-telegram-bot
+pyTelegramBotAPI

@@ -128,9 +128,8 @@ USE_TZ = True
 
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 
-
-
 STATIC_URL = '/static/'
+STATIC_ROOT = 'static'
 
 AUTH_USER_MODEL = 'cabinet.User'
 

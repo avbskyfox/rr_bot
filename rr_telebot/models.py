@@ -95,13 +95,13 @@ class BalanceDialog(models.Model):
         obj, _ = cls.objects.get_or_create(pk=user_id)
 
         # help message entry point
-        if text == 'Help':
+        if text == 'Помощь':
             return obj.input_help(text)
         # purse entry point
-        if text == 'Purse':
+        if text == 'Кошелек':
             return obj.press_purse(text)
         # my account entry point
-        if text == 'My account':
+        if text == 'Аккаунт':
             return obj.press_my_account(text)
 
         resolver = obj.get_resolver()

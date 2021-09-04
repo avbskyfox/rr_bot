@@ -1,4 +1,5 @@
 all:
   hosts:
     terragent.ru:
+      ansible_port: 6543
       ansible_user: web
