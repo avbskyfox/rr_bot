@@ -126,7 +126,7 @@ class Order(models.Model):
     def is_finished(self):
         exerpt_set = self.excerpt_set.all()
         for exerpt in exerpt_set:
-            if not exerpt.is_delivered:
+            if exerpt.is_delivered:
                 return True
         return False
 

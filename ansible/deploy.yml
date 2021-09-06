@@ -4,8 +4,8 @@
   tasks:
     - name: Stop services
       community.general.supervisorctl:
-        name: all
-        state: stoped
+        name: "all:"
+        state: stopped
     - name: Git checkout
       ansible.builtin.git:
         repo: 'git@github.com:avbskyfox/rosreestr.git'
@@ -13,5 +13,5 @@
         version: develop
     - name: Start services
       community.general.supervisorctl:
-        name: all
+        name: "all:"
         state: started
