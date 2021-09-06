@@ -68,7 +68,11 @@ async def filter_step1(call: types.CallbackQuery):
     return await get_curent_step(call.from_user.id) == 1
 
 
-@dp.callback_query_handler(filter_step1)
+async def filter_equal_zero(call: types.CallbackQuery):
+    return call.data == "0"
+
+
+@dp.callback_query_handler(filter_step1, filter_equal_zero)
 async def pick_address_handler(call: types.CallbackQuery):
     await call.message.delete()
     dialog = await pick_address(call.from_user.id, int(call.data))
@@ -174,11 +178,11 @@ async def create_order_handler(call: types.CallbackQuery):
 async def top_up_balance_handler(call: types.CallbackQuery):
     await call.message.delete_reply_markup()
     result = await database_handler.BalanceDialog.async_callback_resolv(call)
+    logger.debug(result)
     if not isinstance(result, list):
         result = [result]
     for item in result:
         text, markup = item
-        logger.debug(text, markup)
         if markup is not None:
             await call.message.answer(text, reply_markup=markup, parse_mode='HTML')
         elif text is not None:

@@ -60,6 +60,8 @@ class BalanceDialog(models.Model):
     resolver = models.TextField(max_length=32, null=True)
 
     def flush(self):
+        main_dialog, _ = Dialog.objects.get_or_create(pk=self.user)
+        main_dialog.flush()
         self.data = None
         self.resolver = None
         self.save()
