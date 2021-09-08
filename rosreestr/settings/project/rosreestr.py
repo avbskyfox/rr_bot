@@ -1,10 +1,6 @@
-import configparser
 import environ
 
 env = environ.Env()
-creds = configparser.ConfigParser()
-creds.read('tokens.ini')
-tokens = creds['TOKENS']
 
 BACKEND = 'rr_backend.basen'
 
