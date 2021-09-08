@@ -156,6 +156,7 @@ class BalanceDialog(models.Model):
     def press_cancel_payment(self, data: str):
         bill_id = int(data.split(' ')[1])
         bill = Bill.objects.get(pk=bill_id)
+        bill.payment.cancel()
         bill.delete()
         self.flush()
         return f'Платеж отменен!', None
