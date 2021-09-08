@@ -10,5 +10,5 @@ daphne
 requests
 python-telegram-bot
 pyTelegramBotAPI
-psycopg2
+psycopg2-binary
 django-environ
