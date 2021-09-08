@@ -1,10 +1,12 @@
+# from django.test
 from unittest import TestCase
 from rr_backend.backend import Backend
 from loguru import logger
 import asyncio
 from rr_backend.basen import BasenClient
 
-address_list = ['Свердловская область, г. Новоуральск, ул. Ленина, д. 67, кв. 3']
+
+address_list = ['г Пермь, тер ГСК 36 Гагарина, д 1224']
 numbers_list = ['']
 
 

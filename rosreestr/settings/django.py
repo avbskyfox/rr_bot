@@ -12,26 +12,36 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 
 import os
 from pathlib import Path
-import configparser
+import environ
+from .databases import DEVELOP_DATABASES, PRODUCTION_DATABASES
+
+env = environ.Env(
+    DEBUG=(bool, False),
+    PRODUCTION=(bool, True)
+)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
+PRODUCTION = env.bool('PRODUCTION')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', "%^c%iu$vy8i^-e#@$cd2n*fxqugf)&!tdf@4p+9yg76bbgnx1d")
+# SECRET_KEY = os.environ.get('SECRET_KEY', "%^c%iu$vy8i^-e#@$cd2n*fxqugf)&!tdf@4p+9yg76bbgnx1d")
+SECRET_KEY = env('SECRET_KEY')
 # SESSION_COOKIE_SECURE = True
 # CSRF_COOKIE_SECURE = True
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = bool(os.environ.get('DJANGO_DEBUG', True))
+DEBUG = env.bool('DEBUG')
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['127.0.0.1']
 
+env.db()
 
 # Application definition
 
@@ -83,12 +93,12 @@ WSGI_APPLICATION = 'rosreestr.wsgi.application'
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    # read os.environ['DATABASE_URL'] and raises
+    # ImproperlyConfigured exception if not found
+    #
+    # The db() method is an alias for db_url().
+    'default': env.db(),
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
@@ -126,27 +136,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-
 STATIC_URL = '/static/'
 STATIC_ROOT = 'static'
 
 AUTH_USER_MODEL = 'cabinet.User'
-
-BACKEND = 'rr_backend.basen'
-
-DEFAULT_CURENCY = 'RUR'
-
-
-
-creds = configparser.ConfigParser()
-creds.read('tokens.ini')
-tokens = creds['TOKENS']
-
-TELEGRAM_API_TOKEN = tokens['TELEGRAM_API_TOKEN']
-DADATA_TOKEN = tokens['DADATA_TOKEN']
-APIEGRN_TOKEN = tokens['APIEGRN_TOKEN']
-BASE_N_TOKEN = tokens['BASE-N_TOKEN']
-FGIS_EGRN_TOKEN = tokens['FGIS_EGRN_TOKEN']
-TINKOFF_TERMINAL = tokens['TINKOFF_TERMINAL']
-TINKOFF_PASSWORD = tokens['TINKOFF_PASSWORD']
