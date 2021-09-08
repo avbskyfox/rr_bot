@@ -128,9 +128,12 @@ class BalanceDialog(models.Model):
     def press_refill(self, data: str):
         self.flush()
         bill_set = Bill.objects.filter(user=self.user, is_payed=False)
+
         for bill in bill_set:
             bill.update_payment()
+
         filtred_bill_set = bill_set.filter(is_payed=False)
+
         if len(filtred_bill_set) > 0:
             bill = filtred_bill_set.first()
             keyboard = types.InlineKeyboardMarkup()
@@ -140,6 +143,13 @@ class BalanceDialog(models.Model):
             keyboard.add(button)
             self.set_resolver('press_cancel_payment')
             return f'У вас уже есть неплаченный счет:\n {bill.amount / 100} RUR', keyboard
+
+        if self.user.email == '':
+            self.set_resolver('input_email')
+            self.data = {'return_to': 'input_amount', 'return_message': 'Введите количество для пополнения:'}
+            self.save()
+            return f'Укажите свой email для получения чеков:', None
+
         self.set_resolver('input_amount')
         return 'Введите количество:', None
 
@@ -147,6 +157,7 @@ class BalanceDialog(models.Model):
         bill_id = int(data.split(' ')[1])
         bill = Bill.objects.get(pk=bill_id)
         bill.delete()
+        self.flush()
         return f'Платеж отменен!', None
 
     def input_amount(self, text: str):
@@ -226,7 +237,11 @@ class BalanceDialog(models.Model):
         if regexp.match(text):
             self.user.email = text.lower()
             self.user.save()
-            self.flush()
+            if self.data['return_to']:
+                self.set_resolver(self.data['return_to'])
+                return f'email изменен на: {self.user.email} \n{self.data["return_message"]}', None
+            else:
+                self.flush()
             return f'email изменен на: {self.user.email}', None
         else:
             return 'Это не похоже на правильный email', None
