@@ -39,10 +39,9 @@ SECRET_KEY = env('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG')
 
-ALLOWED_HOSTS = ['127.0.0.1']
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
 
-env.db()
-
+print(ALLOWED_HOSTS)
 # Application definition
 
 INSTALLED_APPS = [
