@@ -10,7 +10,9 @@ bot = TeleBot(token=settings.TELEGRAM_API_TOKEN)
 def update_exerpt_status(exerpt_id, chat_id):
     exerpt = Excerpt.objects.get(pk=exerpt_id)
     exerpt.check_status()
-    if not exerpt.is_delivered:
+    if not exerpt.is_ready:
         update_exerpt_status.retry()
     else:
         bot.send_message(chat_id, f'{exerpt.type} для {exerpt.address} отправлена Вам на почту')
+        exerpt.is_delivered=True
+        exerpt.save()
