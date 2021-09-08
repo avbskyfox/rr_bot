@@ -14,5 +14,5 @@ def update_exerpt_status(exerpt_id, chat_id):
         update_exerpt_status.retry()
     else:
         bot.send_message(chat_id, f'{exerpt.type} для {exerpt.address} отправлена Вам на почту')
-        exerpt.is_delivered=True
+        exerpt.is_delivered = True
         exerpt.save()

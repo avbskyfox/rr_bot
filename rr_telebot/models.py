@@ -133,10 +133,21 @@ class BalanceDialog(models.Model):
         filtred_bill_set = bill_set.filter(is_payed=False)
         if len(filtred_bill_set) > 0:
             bill = filtred_bill_set.first()
-            return f'У вас уже есть неплаченный счет: {bill.amount / 100} RUR: {bill.payment.payment_url}', None
-        self.resolver = 'input_amount'
-        self.save()
+            keyboard = types.InlineKeyboardMarkup()
+            button = types.InlineKeyboardButton(text='Отменить этот платеж', callback_data=f'cancel: {bill.id}')
+            url = types.InlineKeyboardButton(text='Оплатить через Tinkoff', url=bill.payment.payment_url)
+            keyboard.add(url)
+            keyboard.add(button)
+            self.set_resolver('press_cancel_payment')
+            return f'У вас уже есть неплаченный счет:\n {bill.amount / 100} RUR', keyboard
+        self.set_resolver('input_amount')
         return 'Введите количество:', None
+
+    def press_cancel_payment(self, data: str):
+        bill_id = int(data.split(' ')[1])
+        bill = Bill.objects.get(pk=bill_id)
+        bill.delete()
+        return f'Платеж отменен!', None
 
     def input_amount(self, text: str):
         if not text.isnumeric():
@@ -164,11 +175,14 @@ class BalanceDialog(models.Model):
                                        price=amount * curency.course)
             bill.create_payment()
             update_bill_status.delay(bill.id, self.user.telegram_id)
-            return f'{bill.payment.payment_url}', None
+            keyboard = types.InlineKeyboardMarkup()
+            button = types.InlineKeyboardButton(text='Оплатить через Tinkoff', url=bill.payment.payment_url)
+            keyboard.add(button)
+            return f'Сформирован счетна оплату', keyboard
 
     def input_help(self, text: str):
         self.flush()
-        return 'Help message', None
+        return 'Помощь бла бла бла', None
 
     def press_purse(self, tet: str):
         self.flush()
