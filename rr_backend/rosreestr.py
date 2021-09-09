@@ -5,6 +5,10 @@ from loguru import logger
 from yarl import URL
 
 
+class NotFound(Exception):
+    pass
+
+
 class RosreestrClient:
     @classmethod
     async def find_objects(cls, dadata):
@@ -31,6 +35,8 @@ class RosreestrClient:
                 logger.debug(response.request_info)
                 logger.debug(await response.text())
                 logger.debug(response.status)
+                if response.status == 204:
+                    raise NotFound
                 js = await response.json()
                 result = json.dumps(js, ensure_ascii=False, indent=3)
                 logger.debug(result)

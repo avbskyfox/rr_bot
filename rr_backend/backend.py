@@ -2,8 +2,9 @@ from loguru import logger
 
 from rr_backend.apiegrn import ApiEgrnClient
 from rr_backend.dadata import DadataClient
-from rr_backend.rosreestr import RosreestrClient
+from rr_backend.rosreestr import RosreestrClient, NotFound
 from rr_backend.basen import BasenClient
+from rr_backend.rosreestr_scraper.scraper import find_object
 
 
 class Backend:
@@ -40,7 +41,13 @@ class Backend:
 
     @staticmethod
     async def async_objects_by_address(dadata):
-        objects = await RosreestrClient.find_objects(dadata)
+        logger.debug(dadata)
+        try:
+            objects = await RosreestrClient.find_objects(dadata)
+            from_scraper = False
+        except NotFound:
+            objects = await find_object(dadata)
+            from_scraper = True
         logger.debug(objects)
 
         async def obj_filter(arg):
@@ -49,10 +56,13 @@ class Backend:
             logger.debug(asd)
             return (asd[0]['value']) == dadata['value']
 
-        filtred_objects = []
-        for item in objects:
-            if await obj_filter(item):
-                filtred_objects.append(item)
+        if from_scraper:
+            filtred_objects = objects
+        else:
+            filtred_objects = []
+            for item in objects:
+                if await obj_filter(item):
+                    filtred_objects.append(item)
 
         logger.debug(filtred_objects)
 
