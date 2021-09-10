@@ -57,7 +57,7 @@ class RosreestrClient:
 
     @classmethod
     async def _get_settl(cls, session: aiohttp.ClientSession, dadata_query):
-        query = dadata_query['data']['settlement'] or dadata_query['data']['city']
+        query = dadata_query['data']['city'] or dadata_query['data']['settlement']
         logger.debug(query)
         reg = await cls._get_reg(session, dadata_query)
         async with session.get(f'http://rosreestr.ru/api/online/regions/{reg["regionId"]}') as respone:
@@ -68,7 +68,7 @@ class RosreestrClient:
                     logger.debug(item)
                     # reg['settlementId'] = item['id']
                     return reg
-            return query
+            raise NotFound
 
     @staticmethod
     async def _get_macro_reg(session: aiohttp.ClientSession, dadata_query):

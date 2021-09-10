@@ -1,12 +1,12 @@
-# from django.test
-from unittest import TestCase
+from django.test import TestCase
+# from unittest import TestCase
 from rr_backend.backend import Backend
 from loguru import logger
 import asyncio
 from rr_backend.basen import BasenClient
 
 
-address_list = ['г Пермь, тер ГСК 36 Гагарина, д 1224']
+address_list = ['г Иркутск, мкр Лесной, ул Педагогическая, д 32']
 numbers_list = ['']
 
 
@@ -15,6 +15,7 @@ class TestBackend(TestCase):
         loop = asyncio.get_event_loop()
         for address in address_list:
             result = loop.run_until_complete(Backend.async_find_adress(address))
+            logger.debug(result)
             for item in result:
                 self.assertIn('value', item)
                 self.assertIn('data', item)

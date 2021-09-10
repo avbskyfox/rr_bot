@@ -87,9 +87,9 @@ async def find_object(dadata: dict):
     logger.debug(data)
     result = await get_adress(
         macro=data['region'],
-        region=data['area'] if data['settlement'] else data['city'],
-        city=data['settlement'] if data['settlement'] else data['city'],
-        city_type=city_type_map[data['settlement_type_full'] or data['city_type_full']],
+        region=data['city'] or data['area'],
+        city=data['city'] or data['settlment'],
+        city_type=city_type_map[data['city_type_full'] or data['settlement_type_full']],
         street=data['street'],
         street_type=street_type_map[data['street_type_full']],
         house=data['house'] or '',
