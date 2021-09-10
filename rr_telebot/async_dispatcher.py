@@ -53,7 +53,7 @@ async def join_handler(call: types.CallbackQuery):
 
 @dp.message_handler(content_types=['text'], regexp=".* .* .*")
 async def address_handler(message: types.Message):
-    dadata = await Backend.async_find_adress(message.text)
+    dadata = await Backend.async_find_adress(message.text, message.chat.id)
     if len(dadata) == 0:
         await message.answer(address_not_found)
     else:
@@ -76,11 +76,16 @@ async def filter_equal_zero(call: types.CallbackQuery):
 async def pick_address_handler(call: types.CallbackQuery):
     await call.message.delete()
     dialog = await pick_address(call.from_user.id, int(call.data))
-    results = await Backend.async_objects_by_address(dialog.dadata)
+    results = await Backend.async_objects_by_address(dialog.dadata, call.message.chat.id)
+    if len(results) == 0:
+        await call.message.answer('К сожалению объект не удалось найти')
+        return
     await save_data_to_dialog(call.from_user.id, results)
     text = str()
     buttons = []
     for i, result in enumerate(results):
+        if result['error']:
+            continue
         text += f'\nОбъект {i + 1}:'
         buttons.append(types.InlineKeyboardButton(text=f'Объект {i + 1}', callback_data=i))
         text += f"\n{result['EGRN']['object']['CADNOMER']} - {result['EGRN']['object']['ADDRESS']}"
@@ -125,11 +130,12 @@ async def object_info_handler(call: types.CallbackQuery):
 
 @dp.message_handler(content_types=['text'], regexp=r"^(\d\d):(\d\d):*")
 async def address_by_number_handler(message: types.Message):
-    process_message = await message.answer('trying to find...')
     dialog = await new_dialog(message.from_user.id)
-    result = await Backend.async_object_by_number(message.text)
+    result = await Backend.async_object_by_number(message.text, message.chat.id)
+    logger.debug(result)
+    if len(result) == 0:
+        await message.answer('К сожалению ничего не удалось найти')
     dialog.data = result
-    await process_message.delete()
     await print_full_info(message, dialog, result)
 
 

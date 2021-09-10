@@ -1,7 +1,8 @@
 from celery import shared_task
-from cabinet.models import Bill
-from telebot import TeleBot
 from django.conf import settings
+from telebot import TeleBot
+
+from cabinet.models import Bill
 
 bot = TeleBot(token=settings.TELEGRAM_API_TOKEN)
 
@@ -13,4 +14,4 @@ def update_bill_status(bill_id, chat_id):
     if not bill.is_payed:
         update_bill_status.retry()
     else:
-        bot.send_message(chat_id, f'На ваш сет начисленно {int(bill.amount/100)} RUR')
+        bot.send_message(chat_id, f'На ваш сет начисленно {int(bill.amount / 100)} RUR')
