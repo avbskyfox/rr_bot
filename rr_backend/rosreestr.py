@@ -31,7 +31,7 @@ class RosreestrClient:
                 url += f'&{key}={value}'
             logger.debug(url)
 
-            async with session.get(URL(url, encoded=True)) as response:
+            async with session.get(URL(url, encoded=False)) as response:
                 logger.debug(response.request_info)
                 logger.debug(await response.text())
                 logger.debug(response.status)
