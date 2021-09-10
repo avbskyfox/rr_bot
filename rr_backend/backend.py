@@ -42,36 +42,30 @@ class Backend:
     @staticmethod
     async def async_objects_by_address(dadata):
         logger.debug(dadata)
-        try:
-            objects = await RosreestrClient.find_objects(dadata)
-            from_scraper = False
-        except NotFound:
-            objects = await find_object(dadata)
-            from_scraper = True
-        logger.debug(objects)
 
         async def obj_filter(arg):
             logger.debug(item)
             asd = await DadataClient.find_address(arg['addressNotes'])
-            logger.debug(asd)
+            if len(asd) == 0:
+                return False
+            logger.debug(asd[0]['value'])
+            logger.debug(dadata['value'])
             return (asd[0]['value']) == dadata['value']
 
-        if from_scraper:
-            filtred_objects = objects
-        else:
+        try:
+            objects = await RosreestrClient.find_objects(dadata)
+            logger.debug(objects)
             filtred_objects = []
             for item in objects:
                 if await obj_filter(item):
-                    filtred_objects.append(item)
-
-        logger.debug(filtred_objects)
-
-        result = []
-
-        for item in filtred_objects:
-            info = await ApiEgrnClient.get_info(item['nobjectCn'])
-            result.append(info)
-
+                        filtred_objects.append(item)
+            logger.debug(filtred_objects)
+            result = []
+            for item in filtred_objects:
+                info = await ApiEgrnClient.get_info(item['nobjectCn'])
+                result.append(info)
+        except (NotFound):
+            result = await find_object(dadata)
         logger.debug(result)
         return result
 
