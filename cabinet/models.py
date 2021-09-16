@@ -28,6 +28,7 @@ class BackendException(Exception):
 
 class User(AbstractUser):
     telegram_id = models.CharField(max_length=100, blank=True, db_index=True, unique=True)
+    conditions_accepted = models.BooleanField(default=False)
 
     def __str__(self):
         return f'{self.telegram_id}'

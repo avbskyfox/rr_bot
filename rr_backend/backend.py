@@ -70,6 +70,7 @@ class Backend:
         except NotFound:
             send_progress_message.delay(chat_id, 'парсим страничку поиска Росреестра...')
             result = await find_object(dadata)
+            logger.debug(result)
             for item in result:
                 send_progress_message.delay(chat_id, 'ищем подробную информацию об объекте...')
                 info = await ApiEgrnClient.get_info(item['nobjectCn'])

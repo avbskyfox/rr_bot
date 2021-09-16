@@ -2,6 +2,9 @@ import environ
 
 env = environ.Env()
 
+ROSREESTR_POLICY_FILE = env('ROSREESTR_POLICY_FILE')
+ROSREESTR_OFFERTA_FILE = env('ROSREESTR_OFFERTA_FILE')
+
 BACKEND = 'rr_backend.basen'
 
 DEFAULT_CURENCY = 'RUR'

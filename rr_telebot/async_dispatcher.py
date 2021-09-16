@@ -2,6 +2,7 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.middlewares import BaseMiddleware
 from django.conf import settings
 from loguru import logger
+from aiogram.types.input_file import InputFile
 
 
 from rr_backend.backend import Backend
@@ -18,20 +19,27 @@ dp = Dispatcher(bot)
 class RegisterUserMiddleware(BaseMiddleware):
     @staticmethod
     async def on_process_message(message: types.Message, data):
-        _, created = await create_user(message.from_user.username, message.from_user.id)
+        user, created = await create_user(message.from_user.username, message.from_user.id)
         if created:
             keyboard = types.InlineKeyboardMarkup()
             url = types.InlineKeyboardButton(text='Сайт', url='http://127.0.0.1')
             keyboard.add(url)
-            await message.answer(register_message.format(message.from_user.username), reply_markup=keyboard)
+            await message.answer(register_message.format(message.from_user.username))
+            # await message.answer(start_message)
+
 
 
 @dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
     keyboard = types.InlineKeyboardMarkup()
-    join_button = types.InlineKeyboardButton(text=join_lable, callback_data='join')
+    join_button = types.InlineKeyboardButton(text='Приять', callback_data='accept_conditions')
     keyboard.add(join_button)
-    await message.answer(start_message, reply_markup=keyboard)
+    await message.answer(start_message)
+    file1 = InputFile(settings.ROSREESTR_POLICY_FILE, filename='политика.doc')
+    file2 = InputFile(settings.ROSREESTR_OFFERTA_FILE, filename='оферта.doc')
+    await bot.send_document(message.chat.id, file1)
+    await bot.send_document(message.chat.id, file2)
+    await message.answer('Если вы согласны с условиями, нажмите:', reply_markup=keyboard)
 
 
 def join_filter(call: types.CallbackQuery):
@@ -190,7 +198,10 @@ async def top_up_balance_handler(call: types.CallbackQuery):
     for item in result:
         text, markup = item
         if markup is not None:
-            await call.message.answer(text, reply_markup=markup, parse_mode='HTML')
+            if isinstance(markup, types.InputFile):
+                await bot.send_document(call.message.chat.id, markup)
+            else:
+                await call.message.answer(text, reply_markup=markup, parse_mode='HTML')
         elif text is not None:
             await call.message.answer(text)
 
@@ -204,7 +215,10 @@ async def take_amount_handler(message: types.Message):
         text, markup = item
         logger.debug(text, markup)
         if markup is not None:
-            await message.answer(text, reply_markup=markup, parse_mode='HTML')
+            if isinstance(markup, types.InputFile):
+                await bot.send_document(message.chat.id, markup)
+            else:
+                await message.answer(text, reply_markup=markup, parse_mode='HTML')
         elif text is not None:
             await message.answer(text)
 

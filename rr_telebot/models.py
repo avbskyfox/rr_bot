@@ -47,6 +47,19 @@ class Dialog(models.Model):
         self.save()
 
 
+def conditions_accepted_permission(method):
+    def wraper(*args, **kwargs):
+        user = args[0].user
+        if user.conditions_accepted:
+            return method(*args, **kwargs)
+        else:
+            keyboard = types.InlineKeyboardMarkup()
+            button = types.InlineKeyboardButton(text='Скачать документы', callback_data='download_conditions')
+            keyboard.add(button)
+            return 'Чтобы продолжить необходимо принять условия пользования сервисом', keyboard
+    return wraper
+
+
 class BalanceDialog(models.Model):
     class Meta:
         verbose_name = 'Диалог'
@@ -85,6 +98,10 @@ class BalanceDialog(models.Model):
             return obj.press_change_email(data)
         if data == 'orders':
             return obj.press_orders(data)
+        if data == 'download_conditions':
+            return obj.press_download_conditions(data)
+        if data == 'accept_conditions':
+            return obj.press_accept_conditions(data)
 
         resolver = obj.get_resolver()
         return resolver(data)
@@ -105,6 +122,10 @@ class BalanceDialog(models.Model):
         # my account entry point
         if text == 'Аккаунт':
             return obj.press_my_account(text)
+        if text == 'Заказы':
+            return obj.press_orders(text)
+        if re.match(r'.* .* .*', text):
+            pass
 
         resolver = obj.get_resolver()
         return resolver(text)
@@ -124,6 +145,32 @@ class BalanceDialog(models.Model):
 
     def default_resolver(self, data):
         return f'Упс...\nВы тыкнули када то не туда)\nИли сказали что-то непонятное)\nНачните диалог заново.', None
+
+    def press_download_conditions(self, data):
+        keyboard = types.InlineKeyboardMarkup()
+        join_button = types.InlineKeyboardButton(text='Принять', callback_data='accept_conditions')
+        keyboard.add(join_button)
+        file1 = types.InputFile(settings.ROSREESTR_POLICY_FILE, filename='политика.doc')
+        file2 = types.InputFile(settings.ROSREESTR_OFFERTA_FILE, filename='оферта.doc')
+        self.set_resolver('press_accept_conditions')
+        return [(None, file1), (None, file2), ('Если вы согласны с условиями, нажмите кнопку', keyboard)]
+
+    def press_accept_conditions(self, data):
+        if data == 'accept_conditions':
+            self.user.conditions_accepted = True
+            self.user.save()
+            self.flush()
+            keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            help_button = types.KeyboardButton('Помощь')
+            orders_button = types.KeyboardButton('Заказы')
+            account_button = types.KeyboardButton('Аккаунт')
+            purse_button = types.KeyboardButton('Кошелек')
+            keyboard.add(help_button, account_button)
+            keyboard.add(orders_button, purse_button)
+            return 'Теперь можете продолжить работу с сервисом', keyboard
+        else:
+            return self.default_resolver(data)
+
 
     def press_refill(self, data: str):
         self.flush()
@@ -196,6 +243,7 @@ class BalanceDialog(models.Model):
         self.flush()
         return 'Помощь бла бла бла', None
 
+    @conditions_accepted_permission
     def press_purse(self, tet: str):
         self.flush()
         purse = self.user.purse_set.get(curency__name=settings.DEFAULT_CURENCY)
@@ -222,6 +270,7 @@ class BalanceDialog(models.Model):
 '''
         return text, keyboard
 
+    @conditions_accepted_permission
     def press_change_email(self, data):
         self.flush()
         self.set_resolver('input_email')
@@ -247,6 +296,7 @@ class BalanceDialog(models.Model):
         else:
             return 'Это не похоже на правильный email', None
 
+    @conditions_accepted_permission
     def press_orders(self, data: str):
         self.flush()
         self.set_resolver('press_new_old')

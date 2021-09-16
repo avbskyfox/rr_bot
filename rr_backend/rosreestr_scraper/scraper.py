@@ -149,7 +149,7 @@ async def get_adress(macro, region, city, city_type, street, street_type, house,
     soup = BS(response, 'lxml')
     trs = soup.find_all('tr', onmouseout=True)
     urls = [tr.find('a').get('href') for tr in trs]
-    logger.debug(urls)
+    # logger.debug(urls)
     # print(*[tr.find('td').text.strip() for tr in trs], sep='\n')
     # print(*urls, sep='\n')
 
