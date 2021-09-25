@@ -13,7 +13,14 @@ too_many_addresses = 'Пожалуйста уточните адрес'
 purse_message = 'У вас: {ammount} {curency}'
 purse_lable = 'Кошелек'
 register_message = '{}, Вы зарегистрированы'
-start_message = 'Стартовое сообщение'
+start_message = '''Привет, это бот-помощник "Террагент"
+Территория для агентов по недвижимости
+
+Здесь вы можете:
++ Узнать информацию об объекте недвижимости (выписка)
+
+Предлагаем Вам ознакомиться с условиями работы сервиса:
+'''
 number_not_found_message = 'Not found'
 next_lable = 'Далее'
 variant_line = 'Вариант {i}: {name}, цена: {price}'

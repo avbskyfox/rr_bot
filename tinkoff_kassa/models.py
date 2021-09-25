@@ -80,6 +80,8 @@ class PaymentModel(models.Model):
             self.is_canceled = True
         if self.status == 'REJECTED':
             self.is_canceled = True
+        if self.status == 'DEADLINE_EXPIRED':
+            self.is_canceled = True
         self.save()
 
     def resend(self):

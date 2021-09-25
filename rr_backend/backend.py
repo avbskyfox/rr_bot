@@ -1,4 +1,5 @@
 from loguru import logger
+from asgiref.sync import async_to_sync
 
 from rr_backend.apiegrn import ApiEgrnClient
 from rr_backend.dadata import DadataClient
@@ -9,9 +10,15 @@ from rr_telebot.tasks_notifier import send_progress_message, delete_last_progres
 
 
 class Backend:
+    @classmethod
+    @async_to_sync
+    async def find_adress(cls, address: str, chat_id):
+        return await cls.async_find_adress(address, chat_id)
+
     @staticmethod
     async def async_find_adress(address: str, chat_id):
-        variants = await DadataClient.find_address(address)
+        send_progress_message.delay(chat_id, 'проверяем адрес...')
+        variants = await DadataClient.async_find_address(address)
         # logger.debug(len(variants))
         #
         # def group_bt_street(variants):
@@ -37,8 +44,13 @@ class Backend:
         #         variants.append(lower)
         #
         # group_bt_street(variants)
-
+        delete_last_progress_message.delay(chat_id)
         return variants
+
+    @classmethod
+    @async_to_sync
+    async def objects_by_address(cls, dadata, chat_id):
+        return await cls.async_objects_by_address(dadata, chat_id)
 
     @staticmethod
     async def async_objects_by_address(dadata, chat_id):
@@ -46,7 +58,7 @@ class Backend:
 
         async def obj_filter(arg):
             logger.debug(item)
-            asd = await DadataClient.find_address(arg['addressNotes'])
+            asd = await DadataClient.async_find_address(arg['addressNotes'])
             if len(asd) == 0:
                 return False
             logger.debug(asd[0]['value'])
@@ -69,9 +81,10 @@ class Backend:
                 result.append(info)
         except NotFound:
             send_progress_message.delay(chat_id, 'парсим страничку поиска Росреестра...')
-            result = await find_object(dadata)
-            logger.debug(result)
-            for item in result:
+            objects = await find_object(dadata)
+            result = []
+            for item in objects:
+                logger.debug(item)
                 send_progress_message.delay(chat_id, 'ищем подробную информацию об объекте...')
                 info = await ApiEgrnClient.get_info(item['nobjectCn'])
                 result.append(info)
@@ -89,6 +102,11 @@ class Backend:
         result = await ApiEgrnClient.get_info(number)
         delete_last_progress_message(chat_id)
         return result
+
+    @classmethod
+    @async_to_sync
+    async def object_by_number(cls, number: str, chat_id):
+        return await cls.async_object_by_number(number, chat_id)
 
     @staticmethod
     def get_doc_type1(cadnum):

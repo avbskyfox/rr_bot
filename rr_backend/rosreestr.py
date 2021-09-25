@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 import aiohttp
@@ -5,17 +6,31 @@ from loguru import logger
 from yarl import URL
 
 
+timeout = aiohttp.ClientTimeout(total=15)
+
+
 class NotFound(Exception):
+    pass
+
+
+class TemporaryUnavalible(Exception):
     pass
 
 
 class RosreestrClient:
     @classmethod
     async def find_objects(cls, dadata):
+        try:
+            return await cls._find_objects(dadata)
+        except asyncio.TimeoutError:
+            raise TemporaryUnavalible
+
+    @classmethod
+    async def _find_objects(cls, dadata):
         url = 'http://rosreestr.ru/api/online/address/fir_objects'
         logger.debug(dadata)
         connector = aiohttp.TCPConnector()
-        async with aiohttp.ClientSession(connector=connector) as session:
+        async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
             params = await cls._get_settl(session, dadata)
             logger.debug(params)
             params['street'] = str(dadata['data']['street'])

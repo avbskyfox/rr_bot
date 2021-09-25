@@ -1,4 +1,5 @@
 import importlib
+import time
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
@@ -121,7 +122,7 @@ class Order(models.Model):
     # todo поле number нужно переделать
     @property
     def number(self):
-        return self.id
+        return str(hex(int(time.time()) + self.id)).split('x')[1]
 
     @property
     def is_finished(self):
@@ -247,8 +248,8 @@ class Bill(models.Model):
         verbose_name = 'Счет'
         verbose_name_plural = 'Счета'
 
-    user = models.ForeignKey(User, on_delete=models.DO_NOTHING, db_index=True, verbose_name='Пользователь')
-    curency = models.ForeignKey(Curency, on_delete=models.DO_NOTHING, verbose_name='Внутренняя валюта')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, db_index=True, verbose_name='Пользователь', null=True)
+    curency = models.ForeignKey(Curency, on_delete=models.SET_NULL, verbose_name='Внутренняя валюта', null=True)
     amount = models.IntegerField(verbose_name='Кол-во внутренней валюты')
     price = models.IntegerField(verbose_name='Цена в копейках')
     payment = models.ForeignKey(PaymentModel, on_delete=models.SET_NULL, null=True, default=None)
@@ -258,10 +259,14 @@ class Bill(models.Model):
     def __str__(self):
         return f'{self.user} - {self.amount} {self.curency}'
 
+    @property
+    def number(self):
+        return str(hex(int(time.time()) + self.id)).split('x')[1]
+
     def create_payment(self):
         params = {
             "Amount": str(self.price),
-            "OrderId": str(self.id),
+            "OrderId": str(self.number),
             "Description": f"Покупка внутренней валюты в колиестве: {self.amount}",
             "Receipt": {
                 "Email": self.user.email,

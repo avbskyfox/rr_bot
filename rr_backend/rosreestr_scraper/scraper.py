@@ -1,8 +1,12 @@
+import asyncio
 import re
 
 import aiohttp
 from bs4 import BeautifulSoup as BS
 from loguru import logger
+
+timeout = aiohttp.ClientTimeout(total=15)
+retries_if_503 = 5
 
 REQUEST_URL = 'https://rosreestr.gov.ru/wps/portal/online_request'
 MACRO_REGIONS_URL = 'http://rosreestr.ru/api/online/macro_regions'
@@ -42,7 +46,7 @@ class RosrrestrPageError(Exception):
 
 
 async def post_async(url, params=None, data=None, json=False):
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.post(url, params=params, json=data) as response:
             if response.status == 503:
                 raise RosrrestrPageError
@@ -53,7 +57,7 @@ async def post_async(url, params=None, data=None, json=False):
 
 
 async def get_async(url, params=None, json=False):
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(url, params=params) as response:
             if response.status == 503:
                 raise RosrrestrPageError
@@ -85,20 +89,29 @@ async def get_request_url():
 async def find_object(dadata: dict):
     data = dadata['data']
     logger.debug(data)
-    result = await get_adress(
-        macro=data['region'],
-        region=data['city'] or data['area'],
-        city=data['city'] or data['settlment'],
-        city_type=city_type_map[data['city_type_full'] or data['settlement_type_full']],
-        street=data['street'],
-        street_type=street_type_map[data['street_type_full']],
-        house=data['house'] or '',
-        building=data['block'] or '',
-        structure='',
-        apartment=data['flat']
-    )
-    logger.debug(result)
-    return [{'nobjectCn': item['Кадастровый номер:'], 'addressNotes': item['Адрес (местоположение):']} for item in result]
+    for i in range(0, retries_if_503):
+        try:
+            result = await get_adress(
+                macro=data['region'],
+                region=data['city'] or data['area'],
+                city=data['city'] or data['settlment'],
+                city_type=city_type_map[data['city_type_full'] or data['settlement_type_full']],
+                street=data['street'],
+                street_type=street_type_map[data['street_type_full']],
+                house=data['house'] or '',
+                building=data['block'] or '',
+                structure='',
+                apartment=data['flat']
+            )
+            ok = True
+            break
+        except RosrrestrPageError:
+            continue
+    if ok:
+        logger.debug(result)
+        return [{'nobjectCn': item['Кадастровый номер:'], 'addressNotes': item['Адрес (местоположение):']} for item in result]
+    else:
+        raise asyncio.TimeoutError(f'Rosrreestr return 503 more then {retries_if_503} times')
 
 
 async def get_adress(macro, region, city, city_type, street, street_type, house, building, structure, apartment):
