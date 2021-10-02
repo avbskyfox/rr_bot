@@ -1,5 +1,6 @@
 from loguru import logger
 from asgiref.sync import async_to_sync
+from asyncio import sleep
 
 from rr_backend.apiegrn import ApiEgrnClient
 from rr_backend.dadata import DadataClient
@@ -52,8 +53,8 @@ class Backend:
     async def objects_by_address(cls, dadata, chat_id):
         return await cls.async_objects_by_address(dadata, chat_id)
 
-    @staticmethod
-    async def async_objects_by_address(dadata, chat_id):
+    @classmethod
+    async def async_objects_by_address(cls, dadata, chat_id):
         logger.debug(dadata)
 
         async def obj_filter(arg):
@@ -76,17 +77,20 @@ class Backend:
             logger.debug(filtred_objects)
             result = []
             for item in filtred_objects:
-                send_progress_message.delay(chat_id, 'ищем подробную информацию об объекте...')
-                info = await ApiEgrnClient.get_info(item['nobjectCn'])
-                result.append(info)
+                try:
+                    info = await cls.async_object_by_number(item['nobjectCn'], chat_id)
+                    result.append(info)
+                except NotFound:
+                    pass
+            if len(result) == 0:
+                raise TimeoutError('не найдена инфомрация ни по одному объекту')
         except NotFound:
             send_progress_message.delay(chat_id, 'парсим страничку поиска Росреестра...')
             objects = await find_object(dadata)
             result = []
             for item in objects:
                 logger.debug(item)
-                send_progress_message.delay(chat_id, 'ищем подробную информацию об объекте...')
-                info = await ApiEgrnClient.get_info(item['nobjectCn'])
+                info = await cls.async_object_by_number(item['nobjectCn'], chat_id)
                 result.append(info)
         logger.debug(result)
         if len(result) != 0:
@@ -98,8 +102,18 @@ class Backend:
     @staticmethod
     async def async_object_by_number(number: str, chat_id):
         logger.debug(number)
-        send_progress_message.delay(chat_id, 'опрашиваем сервис Росреестра...')
-        result = await ApiEgrnClient.get_info(number)
+        send_progress_message.delay(chat_id, 'ищем подробную информацию об объекте')
+        found = False
+        for i in range(0, 3):
+            try:
+                result = await ApiEgrnClient.get_info(number)
+                found = True
+            except NotFound:
+                await sleep(3)
+            else:
+                break
+        if not found:
+            raise NotFound
         delete_last_progress_message(chat_id)
         return result
 

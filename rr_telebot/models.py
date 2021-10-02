@@ -1,16 +1,17 @@
 import re
+from asyncio.exceptions import TimeoutError
 
 from aiogram import types, Bot
 from asgiref.sync import sync_to_async, async_to_sync
 from django.conf import settings
 from django.db import models
 from loguru import logger
-from rr_backend.backend import Backend
-from asyncio.exceptions import TimeoutError
-from rr_backend.rosreestr import TemporaryUnavalible
 
-from cabinet.models import User, Service, Curency, Bill, Order
+from cabinet.models import User, Service, Curency, Bill, Order, OrderException, BackendException
+from rr_backend.backend import Backend
+from rr_backend.rosreestr import TemporaryUnavalible, NotFound
 from .tasks import update_bill_status
+
 bot = Bot(token=settings.TELEGRAM_API_TOKEN)
 
 
@@ -64,6 +65,7 @@ def conditions_accepted_permission(method):
             button = types.InlineKeyboardButton(text='Скачать документы', callback_data='download_conditions')
             keyboard.add(button)
             return 'Чтобы продолжить необходимо принять условия пользования сервисом', keyboard
+
     return wraper
 
 
@@ -150,6 +152,10 @@ class BalanceDialog(models.Model):
         if re.match(r'.* .* .*', text):
             obj.flush()
             return obj.input_adress_string(text)
+
+        if re.match(r"^(\d\d):(\d\d):*", text):
+            obj.flush()
+            return obj.input_cadastr_number(text)
 
         resolver = obj.get_resolver()
         return resolver(text)
@@ -267,15 +273,15 @@ class BalanceDialog(models.Model):
             keyboard = types.InlineKeyboardMarkup()
             button = types.InlineKeyboardButton(text='Оплатить через Tinkoff', url=bill.payment.payment_url)
             keyboard.add(button)
-            if self.data['return_to']:
-                if self.data['return_to'] == 'press_on_service':
-                    self.set_resolver('press_on_service')
-                    keyboard2 = types.InlineKeyboardMarkup()
-                    button2 = types.InlineKeyboardButton(text='Прдолжить оформление',
-                                                         callback_data=self.data['return_data'])
-                    keyboard2.add(button2)
-                    return [('Сформирован счетна оплату', keyboard),
-                            ('После совершения оплаты, можете продолжить оформление заказа', keyboard2)]
+            logger.debug(self.data)
+            if self.data.get('return_to', None) == 'press_on_service':
+                self.set_resolver('press_on_service')
+                keyboard2 = types.InlineKeyboardMarkup()
+                button2 = types.InlineKeyboardButton(text='Прдолжить оформление',
+                                                     callback_data=self.data['return_data'])
+                keyboard2.add(button2)
+                return [('Сформирован счетна оплату', keyboard),
+                        ('После совершения оплаты, можете продолжить оформление заказа', keyboard2)]
             return f'Сформирован счетна оплату', keyboard
 
     def input_help(self, text: str):
@@ -393,6 +399,16 @@ class BalanceDialog(models.Model):
             keyboard.row(button)
             return self.data['addr_variants']['value'], keyboard
 
+    def input_cadastr_number(self, data: str):
+        try:
+            result = Backend.object_by_number(data, self.chat_id)
+            logger.debug(result)
+        except NotFound:
+            return 'Ничего не найдено, проверьте правильность ввода. ' \
+                   'Если вы ввели все верно, возможно это временная проблема Росреестра', None
+        self.data['search_results'] = [result]
+        return self.press_on_object_variant('object_0')
+
     def press_next_on_adsress(self, data: str):
         if data != 'next':
             return self.default_resolver(data)
@@ -412,12 +428,10 @@ class BalanceDialog(models.Model):
         text = str()
         buttons = []
         for i, result in enumerate(results):
-            if result['error']:
-                continue
             text += f'\n<b>Объект {i + 1}:</b>'
             buttons.append(types.InlineKeyboardButton(text=f'Объект {i + 1}', callback_data=f'object_{i}'))
-            text += f"\n{result['EGRN']['object']['CADNOMER']} - {result['EGRN']['object']['ADDRESS']}"
-            text += f"\nСтатус объекта: {result['EGRN']['details']['Статус объекта']}\n" or 'Неизвестно\n'
+            text += f"\n{result['Кадастровый номер']} - {result['Адрес']}"
+            text += f"\nСтатус объекта: {result['Статус объекта']}\n"
 
         keyboard = types.InlineKeyboardMarkup()
         for button in buttons:
@@ -434,22 +448,11 @@ class BalanceDialog(models.Model):
         variant = self.data['search_results'][object_id]
         self.data['choosen_variant'] = variant
         self.set_resolver('press_on_service')
-        logger.debug(self.data["choosen_variant"]["EGRN"]["object"]["ADDRESS"])
+        # logger.debug(self.data["choosen_variant"]["EGRN"]["object"]["ADDRESS"])
         text = f'<b>Информация по объекту</b>\n'
         logger.debug(variant)
-        output = {
-            'Кадастровый номер': variant['EGRN']['details']['Кадастровый номер'] or '',
-            'Адрес': variant["EGRN"]["object"]["ADDRESS"] or '',
-            'Объект': f"{variant['EGRN']['details']['(ОКС) Тип']} ({variant['EGRN']['details']['(ОКС) Этажность']} эт.)" or '',
-            # 'Год ввода': variant['EGRN']['details']['Кадастровый номер'] or ''
-            'Кадастровая стоимость': f"{variant['EGRN']['details']['Кадастровая стоимость']} ({variant['EGRN']['details']['Дата внесения стоимости']} г.)",
-            'Площадь': variant['EGRN']['details']['Площадь ОКС\'а'],
-            'Количество правообладателей': variant['EGRN']['details']['Количество правообладателей'],
-            'Вид собственности': f"{variant['EGRN']['rights'][0]['type']} (от {variant['EGRN']['rights'][0]['date']} г.)",
-            'Обременения': 'Зафиксированы' if len(variant['EGRN']['rights'][0]) > 0 else 'Не зафиксированы'
-        }
-        logger.debug(output)
-        for key, value in output.items():
+        logger.debug(variant)
+        for key, value in variant.items():
             text += f'\n<b>{key}</b>: {value}'
 
         price_list = Service.price_list()
@@ -480,8 +483,8 @@ class BalanceDialog(models.Model):
             keyboard.add(button_ok)
             keyboard.add(button_cancel)
             return f'''Подтвердите ваш заказ:
-Адресс: {self.data["choosen_variant"]["EGRN"]["object"]["ADDRESS"]}
-Кадастровый номер: {self.data["choosen_variant"]["EGRN"]["object"]["CADNOMER"]}
+Адресс: {self.data["choosen_variant"]["Адрес"]}
+Кадастровый номер: {self.data["choosen_variant"]["Кадастровый номер"]}
 Услуга: {service.name}
 Стоимость: {service.get_price()}
 На счете останется: {purse.ammount - service.get_price()}''', keyboard
@@ -494,3 +497,18 @@ class BalanceDialog(models.Model):
             keyboard.add(button)
             return f'У вас на счете: {purse.ammount}, небходимо {service.get_price()}. ' \
                    f'Для продолжения <b>пополните счет</b>', keyboard
+
+    def press_confirm_order(self, data: str):
+        curency = Curency.objects.get(name__exact=settings.DEFAULT_CURENCY)
+        service = Service.objects.get(pk=self.data['service_id'])
+        try:
+            order = Order.create_order(self.user,
+                                       service,
+                                       curency,
+                                       number=self.data["choosen_variant"]["Кадастровый номер"],
+                                       address=self.data["choosen_variant"]["Адрес"])
+        except (OrderException, BackendException) as m:
+            return m, None
+        else:
+            self.flush()
+            return f'Сформирован заказ № {order.number}', None
