@@ -5,7 +5,8 @@ from django.conf import settings
 from rr_backend.rosreestr import NotFound
 from loguru import logger
 
-APIEGRN_TOKEN = settings.APIEGRN_TOKEN
+# APIEGRN_TOKEN = settings.APIEGRN_TOKEN
+APIEGRN_TOKEN = 'PXN3-L0OV-IE7C-A1FZ'
 SEARCH_URL = 'https://apiegrn.ru/api/cadaster/search'
 INFO_URL = 'https://apiegrn.ru/api/cadaster/objectInfoFull'
 
@@ -17,7 +18,6 @@ def _get_from(details: dict, key_string):
         else:
             continue
     return None
-
 
 
 class ApiEgrnClient:

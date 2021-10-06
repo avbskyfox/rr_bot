@@ -7,7 +7,7 @@ from django.conf import settings
 from django.db import models
 from loguru import logger
 
-from cabinet.models import User, Service, Curency, Bill, Order, OrderException, BackendException
+from cabinet.models import User, Service, Curency, Bill, Order, OrderException, BackendException, Excerpt
 from rr_backend.backend import Backend
 from rr_backend.rosreestr import TemporaryUnavalible, NotFound
 from .tasks import update_bill_status
@@ -352,10 +352,18 @@ class BalanceDialog(models.Model):
     @conditions_accepted_permission
     def press_orders(self, data: str):
         # self.flush()
+        orders = self.user.order_set.all()
+        processed_orders = []
+        finished_orders = []
+        for order in orders:
+            if order.is_finished:
+                finished_orders.append(order)
+            else:
+                processed_orders.append(order)
         self.set_resolver('press_new_old')
         keyboard = types.InlineKeyboardMarkup()
-        new_button = types.InlineKeyboardButton(text='Новые', callback_data='new_orders')
-        old_button = types.InlineKeyboardButton(text='Исполненные', callback_data='old_orders')
+        new_button = types.InlineKeyboardButton(text=f'В обработке ({len(processed_orders)})', callback_data='new_orders')
+        old_button = types.InlineKeyboardButton(text=f'Исполненные({len(finished_orders)})', callback_data='old_orders')
         keyboard.add(new_button)
         keyboard.add(old_button)
         return 'Выбирете:', keyboard
@@ -379,12 +387,29 @@ class BalanceDialog(models.Model):
     def press_view_order(self, data: str):
         if data.find('order: ') == 0:
             order_id = int(data.split(' ')[1])
-            order = self.user.order_set.get(pk=order_id)
+            order = Order.objects.get(pk=order_id)
             text = f'Заказ № {order.number} от {order.date_created.strftime("%d.%m.%Y")}\n для адреса {order.address}\n'
             for exerpt in order.excerpt_set.all():
-                text += f'{exerpt.type.name}\n'
-            return text, None
+                if not exerpt.is_delivered:
+                    exerpt.check_status()
+                status = 'отправлена на почту' if exerpt.is_delivered else 'в обработке'
+                text += f'{exerpt.type.name}: {status}\n'
+            keyboard = types.InlineKeyboardMarkup()
+            button = types.InlineKeyboardButton(text='Получить на почту еще раз...', callback_data=f'order_{order.id}')
+            keyboard.add(button)
+            self.set_resolver('press_resend_docs')
+            return text, keyboard
         return None, None
+
+    def press_resend_docs(self, data: str):
+        if data.find('order_') == 0:
+            order_id = int(data.split('_')[1])
+            order = Order.objects.get(pk=order_id)
+            for excerpt in order.excerpt_set.all():
+                if excerpt.is_delivered:
+                    excerpt.send_docs()
+        self.flush()
+        return 'Готово', None
 
     def input_adress_string(self, data: str):
         self.flush()

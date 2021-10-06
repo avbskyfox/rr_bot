@@ -128,9 +128,9 @@ class Order(models.Model):
     def is_finished(self):
         exerpt_set = self.excerpt_set.all()
         for exerpt in exerpt_set:
-            if exerpt.is_delivered:
-                return True
-        return False
+            if not exerpt.is_delivered:
+                return False
+        return True
 
     @property
     def address(self):
@@ -221,6 +221,8 @@ class Excerpt(models.Model):
                 self.send_docs()
                 self.save()
                 return True
+            else:
+                return False
 
     def download_docs(self):
         return Backend.download_doc(self.foreign_number)
@@ -230,6 +232,8 @@ class Excerpt(models.Model):
                   subject=f'Выписки к заказу № {self.order.number}',
                   text='Ваши выписки готовы',
                   files=self.download_docs())
+        self.is_delivered = True
+        self.save()
 
     @sync_to_async
     def async_send_docs(self):
