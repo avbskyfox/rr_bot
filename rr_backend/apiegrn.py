@@ -30,7 +30,10 @@ class ApiEgrnClient:
         }
         async with aiohttp.ClientSession() as session:
             async with session.post(SEARCH_URL, json=data, headers=headers) as response:
-                return await response.json()
+                result = await response.json()
+                logger.debug(result['objects'])
+                return [{'nobjectCn': item['CADNOMER'], 'addressNotes': item['ADDRESS']} for
+                        item in result['objects']]
 
     @staticmethod
     async def get_info(cadnum: str):

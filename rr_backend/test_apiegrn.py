@@ -3,7 +3,6 @@ from rr_backend.apiegrn import ApiEgrnClient
 from asgiref.sync import async_to_sync
 
 
-
 addr = 'г Екатеринбург, ул Машинная, д 31В, кв 107'
 
 

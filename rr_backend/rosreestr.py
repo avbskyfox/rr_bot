@@ -32,14 +32,12 @@ class RosreestrClient:
         connector = aiohttp.TCPConnector()
         async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
             params = await cls._get_settl(session, dadata)
-            logger.debug(params)
             params['street'] = str(dadata['data']['street'])
             params['house'] = dadata['data']['house']
             if dadata['data']['flat']:
                 params['apartment'] = dadata['data']['flat']
             if dadata['data']['block']:
                 params['building'] = dadata['data']['block']
-
             logger.debug(params)
             url += '?'
             for key, value in params.items():

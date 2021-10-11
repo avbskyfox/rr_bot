@@ -67,7 +67,7 @@ class Backend:
             return (asd[0]['value']) == dadata['value']
 
         try:
-            send_progress_message.delay(chat_id, 'опрашиваем сервис Росреестра...')
+            send_progress_message.delay(chat_id, 'опрашиваем Росреестра...')
             objects = await RosreestrClient.find_objects(dadata)
             logger.debug(objects)
             filtred_objects = []
@@ -85,13 +85,15 @@ class Backend:
             if len(result) == 0:
                 raise TimeoutError('не найдена инфомрация ни по одному объекту')
         except NotFound:
-            send_progress_message.delay(chat_id, 'парсим страничку поиска Росреестра...')
-            objects = await find_object(dadata)
+            send_progress_message.delay(chat_id, 'ищем информацию...')
+            objects = await ApiEgrnClient.search(dadata['value'])
+            # objects = await find_object(dadata)
             result = []
             for item in objects:
                 logger.debug(item)
                 info = await cls.async_object_by_number(item['nobjectCn'], chat_id)
                 result.append(info)
+
         logger.debug(result)
         if len(result) != 0:
             delete_last_progress_message.delay(chat_id)
