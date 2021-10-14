@@ -65,7 +65,6 @@ def conditions_accepted_permission(method):
             button = types.InlineKeyboardButton(text='Скачать документы', callback_data='download_conditions')
             keyboard.add(button)
             return 'Чтобы продолжить необходимо принять условия пользования сервисом', keyboard
-
     return wraper
 
 

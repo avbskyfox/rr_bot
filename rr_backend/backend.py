@@ -1,13 +1,14 @@
 from asyncio import sleep
 
 from asgiref.sync import async_to_sync
-from loguru import logger
+
 
 from rr_backend.apiegrn import ApiEgrnClient
 from rr_backend.basen import BasenClient
 from rr_backend.dadata import DadataClient
 from rr_backend.rosreestr import RosreestrClient, NotFound
 from rr_telebot.tasks_notifier import send_progress_message, delete_last_progress_message
+from rr_backend.middlewares.cashing_middleware import async_cashed_call
 
 
 class Backend:
@@ -17,6 +18,7 @@ class Backend:
         return await cls.async_find_adress(address, chat_id)
 
     @staticmethod
+    @async_cashed_call(ttl=600)
     async def async_find_adress(address: str, chat_id):
         send_progress_message.delay(chat_id, 'проверяем адрес...')
         variants = await DadataClient.async_find_address(address)
@@ -54,6 +56,7 @@ class Backend:
         return await cls.async_objects_by_address(dadata, chat_id)
 
     @classmethod
+    @async_cashed_call
     async def async_objects_by_address(cls, dadata, chat_id):
 
         async def obj_filter(arg):
@@ -93,6 +96,7 @@ class Backend:
             return result
 
     @staticmethod
+    @async_cashed_call
     async def async_object_by_number(number: str, chat_id):
         send_progress_message.delay(chat_id, 'ищем подробную информацию об объекте...')
         found = False
