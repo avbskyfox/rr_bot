@@ -18,7 +18,7 @@ class Backend:
         return await cls.async_find_adress(address, chat_id)
 
     @staticmethod
-    @async_cashed_call(ttl=600)
+    @async_cashed_call
     async def async_find_adress(address: str, chat_id):
         send_progress_message.delay(chat_id, 'проверяем адрес...')
         variants = await DadataClient.async_find_address(address)

@@ -173,7 +173,7 @@ class BalanceDialog(models.Model):
         return getattr(self, str(self.resolver), self.default_resolver)
 
     def default_resolver(self, data):
-        return f'Упс...\nВы тыкнули када то не туда)\nИли сказали что-то непонятное)\nНачните диалог заново.', None
+        return f'Упс...\nВы тыкнули када то не туда :)\nИли сказали что-то непонятное :)\nПожалуйста, начните диалог заново.', None
 
     def press_download_conditions(self, data):
         keyboard = types.InlineKeyboardMarkup()
@@ -217,13 +217,13 @@ class BalanceDialog(models.Model):
             keyboard.add(url)
             keyboard.add(button)
             self.set_resolver('press_cancel_payment')
-            return f'У вас уже есть неплаченный счет:\n {bill.amount / 100} RUR', keyboard
+            return f'У вас уже есть неплаченный счет:\n {bill.amount / 100} {settings.DEFAULT_CURENCY}', keyboard
 
         if self.user.email == '':
             self.set_resolver('input_email')
             self.data = {'return_to': 'input_amount', 'return_message': 'Выбирете сумму, либо введите вручную:'}
             self.save()
-            return f'Нобходимо <b>указать email</b> для получения чеков:', None
+            return f'Необходимо <b>указать email</b> для получения чеков:', None
 
         self.set_resolver('input_amount')
         keyboard = types.InlineKeyboardMarkup()
@@ -253,7 +253,7 @@ class BalanceDialog(models.Model):
         yes_button = types.InlineKeyboardButton(text='да', callback_data='y')
         no_button = types.InlineKeyboardButton(text='нет', callback_data='n')
         keyboard.add(yes_button, no_button)
-        return f'Пополнить счет на {text} RUR?', keyboard
+        return f'Пополнить счет на {text} {settings.DEFAULT_CURENCY}?', keyboard
 
     def press_amount_yes_no(self, data: str):
         if data == 'n':
@@ -278,7 +278,7 @@ class BalanceDialog(models.Model):
                 button2 = types.InlineKeyboardButton(text='Прдолжить оформление',
                                                      callback_data=self.data['return_data'])
                 keyboard2.add(button2)
-                return [('Сформирован счетна оплату', keyboard),
+                return [('Сформирован счетна на оплату', keyboard),
                         ('После совершения оплаты, можете продолжить оформление заказа', keyboard2)]
             return f'Сформирован счетна оплату', keyboard
 
@@ -300,15 +300,16 @@ class BalanceDialog(models.Model):
         keyboard = types.InlineKeyboardMarkup()
         top_up_balance = types.InlineKeyboardButton(text='Поплнить баланс', callback_data='refill')
         orders = types.InlineKeyboardButton(text='Заказы', callback_data='orders')
-        referal = types.InlineKeyboardButton(text='Рефералка', callback_data='referal')
+        # referal = types.InlineKeyboardButton(text='Рефералка', callback_data='referal')
         change_email = types.InlineKeyboardButton(text='Изменить email', callback_data='change_email')
         keyboard.add(top_up_balance)
         keyboard.add(orders)
-        keyboard.add(referal)
+        # keyboard.add(referal)
         keyboard.add(change_email)
+        # curency = Curency.objects.get(name__exact=settings.DEFAULT_CURENCY)
         text = f'''<b>Ваш ID</b>: {self.user.telegram_id}
 <b>Email</b>: {self.user.email}
-<b>Баланс</b>: {self.user.purse_set.get(curency__name=settings.DEFAULT_CURENCY).ammount}
+<b>Баланс</b>: {self.user.purse_set.get(curency__name=settings.DEFAULT_CURENCY).ammount} {settings.DEFAULT_CURENCY}
 '''
         # Вы с нами с: {self.user.date_joined.strftime('%d.%m.%Y')}
 
@@ -477,7 +478,7 @@ class BalanceDialog(models.Model):
         price_list = Service.price_list()
         keyboard = types.InlineKeyboardMarkup()
         for price in price_list:
-            button = types.InlineKeyboardButton(text=f'{price["short_name"]} за {price["price"]}',
+            button = types.InlineKeyboardButton(text=f'{price["short_name"]} за {price["price"]} {settings.DEFAULT_CURENCY}',
                                                 callback_data=f'service_{price["id"]}')
             keyboard.add(button)
         return text, keyboard
@@ -518,16 +519,20 @@ class BalanceDialog(models.Model):
                    f'Для продолжения <b>пополните счет</b>', keyboard
 
     def press_confirm_order(self, data: str):
-        curency = Curency.objects.get(name__exact=settings.DEFAULT_CURENCY)
-        service = Service.objects.get(pk=self.data['service_id'])
-        try:
-            order = Order.create_order(self.user,
-                                       service,
-                                       curency,
-                                       number=self.data["choosen_variant"]["Кадастровый номер"],
-                                       address=self.data["choosen_variant"]["Адрес"])
-        except (OrderException, BackendException) as m:
-            return m, None
-        else:
+        if data == 'confirm':
+            curency = Curency.objects.get(name__exact=settings.DEFAULT_CURENCY)
+            service = Service.objects.get(pk=self.data['service_id'])
+            try:
+                order = Order.create_order(self.user,
+                                           service,
+                                           curency,
+                                           number=self.data["choosen_variant"]["Кадастровый номер"],
+                                           address=self.data["choosen_variant"]["Адрес"])
+            except (OrderException, BackendException) as m:
+                return m, None
+            else:
+                self.flush()
+                return f'Сформирован заказ № {order.number}', None
+        elif data == 'cancel':
             self.flush()
-            return f'Сформирован заказ № {order.number}', None
+            return 'Отменил!', None
