@@ -94,7 +94,7 @@ class Backend:
 
     @staticmethod
     async def async_object_by_number(number: str, chat_id):
-        send_progress_message.delay(chat_id, 'ищем подробную информацию об объекте')
+        send_progress_message.delay(chat_id, 'ищем подробную информацию об объекте...')
         found = False
         for i in range(0, 3):
             try:

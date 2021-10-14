@@ -251,8 +251,8 @@ class BalanceDialog(models.Model):
         self.resolver = 'press_amount_yes_no'
         self.save()
         keyboard = types.InlineKeyboardMarkup()
-        yes_button = types.InlineKeyboardButton(text='yes', callback_data='y')
-        no_button = types.InlineKeyboardButton(text='no', callback_data='n')
+        yes_button = types.InlineKeyboardButton(text='да', callback_data='y')
+        no_button = types.InlineKeyboardButton(text='нет', callback_data='n')
         keyboard.add(yes_button, no_button)
         return f'Пополнить счет на {text} RUR?', keyboard
 
