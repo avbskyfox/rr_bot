@@ -1,12 +1,12 @@
-from loguru import logger
-from asgiref.sync import async_to_sync
 from asyncio import sleep
 
+from asgiref.sync import async_to_sync
+from loguru import logger
+
 from rr_backend.apiegrn import ApiEgrnClient
+from rr_backend.basen import BasenClient
 from rr_backend.dadata import DadataClient
 from rr_backend.rosreestr import RosreestrClient, NotFound
-from rr_backend.basen import BasenClient
-from rr_backend.rosreestr_scraper.scraper import find_object
 from rr_telebot.tasks_notifier import send_progress_message, delete_last_progress_message
 
 
@@ -55,26 +55,20 @@ class Backend:
 
     @classmethod
     async def async_objects_by_address(cls, dadata, chat_id):
-        logger.debug(dadata)
 
         async def obj_filter(arg):
-            logger.debug(item)
             asd = await DadataClient.async_find_address(arg['addressNotes'])
             if len(asd) == 0:
                 return False
-            logger.debug(asd[0]['value'])
-            logger.debug(dadata['value'])
             return (asd[0]['value']) == dadata['value']
 
         try:
             send_progress_message.delay(chat_id, 'опрашиваем Росреестра...')
             objects = await RosreestrClient.find_objects(dadata)
-            logger.debug(objects)
             filtred_objects = []
             for item in objects:
                 if await obj_filter(item):
-                        filtred_objects.append(item)
-            logger.debug(filtred_objects)
+                    filtred_objects.append(item)
             result = []
             for item in filtred_objects:
                 try:
@@ -90,11 +84,8 @@ class Backend:
             # objects = await find_object(dadata)
             result = []
             for item in objects:
-                logger.debug(item)
                 info = await cls.async_object_by_number(item['nobjectCn'], chat_id)
                 result.append(info)
-
-        logger.debug(result)
         if len(result) != 0:
             delete_last_progress_message.delay(chat_id)
             return result
@@ -103,7 +94,6 @@ class Backend:
 
     @staticmethod
     async def async_object_by_number(number: str, chat_id):
-        logger.debug(number)
         send_progress_message.delay(chat_id, 'ищем подробную информацию об объекте')
         found = False
         for i in range(0, 3):

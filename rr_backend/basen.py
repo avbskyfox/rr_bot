@@ -41,7 +41,7 @@ class BasenClient:
 
     @classmethod
     def order_docs(cls, cadnum: str, doc_type: str):
-        logger.debug(cls.check_basen_deposit())
+        logger.debug(f'base_n: {cls.check_basen_deposit()}')
         payload = {
             'base_n_api_key': TOKEN,
             'fgis_egrn_key': FGIS_EGRN_TOKEN,
@@ -66,7 +66,7 @@ class BasenClient:
         url = BASE_URL + CHECK_ORDER_URL
         response = requests.post(url, json=payload)
         data = response.json()
-        logger.debug(data)
+        logger.debug(f'base_n: {data}')
         return data
 
     @staticmethod
@@ -92,7 +92,7 @@ class BasenClient:
         url = BASE_URL + GET_EXCERPT
         response = requests.post(url, json=payload)
         data = response.content
-        logger.debug(data)
+        logger.debug(f'base_n get_docs status code: {response.status_code}')
         return data
 
 

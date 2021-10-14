@@ -7,7 +7,7 @@ from django.conf import settings
 from django.db import models
 from loguru import logger
 
-from cabinet.models import User, Service, Curency, Bill, Order, OrderException, BackendException, Excerpt
+from cabinet.models import User, Service, Curency, Bill, Order, OrderException, BackendException
 from rr_backend.backend import Backend
 from rr_backend.rosreestr import TemporaryUnavalible, NotFound
 from .tasks import update_bill_status
@@ -81,6 +81,9 @@ class BalanceDialog(models.Model):
     data = models.JSONField(default=dict, max_length=8096)
     resolver = models.TextField(max_length=32, null=True)
 
+    def __str__(self):
+        return f'{self.user.username}_dialog'
+
     chat_id = None
 
     def send_message(self, text, reply_markup=None):
@@ -89,7 +92,7 @@ class BalanceDialog(models.Model):
     def flush(self):
         # main_dialog, _ = Dialog.objects.get_or_create(pk=self.user)
         # main_dialog.flush()
-        logger.debug('dialog flushed')
+        logger.debug(f'dialog {str(self)} flushed')
         self.data = {}
         self.resolver = None
         self.save()
@@ -104,8 +107,6 @@ class BalanceDialog(models.Model):
         obj, _ = cls.objects.get_or_create(pk=user_id)
         obj.chat_id = callback.message.chat.id
         data = callback.data
-        logger.debug(data)
-
         # refill dialog entry point
         if data == 'refill':
             # obj.flush()
@@ -131,7 +132,6 @@ class BalanceDialog(models.Model):
     def message_resolv(cls, message: types.Message):
         user_id = message.from_user.id
         text = message.text
-        logger.debug(text)
         obj, _ = cls.objects.get_or_create(pk=user_id)
         obj.chat_id = message.chat.id
 
@@ -273,7 +273,6 @@ class BalanceDialog(models.Model):
             keyboard = types.InlineKeyboardMarkup()
             button = types.InlineKeyboardButton(text='Оплатить через Tinkoff', url=bill.payment.payment_url)
             keyboard.add(button)
-            logger.debug(self.data)
             if self.data.get('return_to', None) == 'press_on_service':
                 self.set_resolver('press_on_service')
                 keyboard2 = types.InlineKeyboardMarkup()
@@ -362,7 +361,8 @@ class BalanceDialog(models.Model):
                 processed_orders.append(order)
         self.set_resolver('press_new_old')
         keyboard = types.InlineKeyboardMarkup()
-        new_button = types.InlineKeyboardButton(text=f'В обработке ({len(processed_orders)})', callback_data='new_orders')
+        new_button = types.InlineKeyboardButton(text=f'В обработке ({len(processed_orders)})',
+                                                callback_data='new_orders')
         old_button = types.InlineKeyboardButton(text=f'Исполненные({len(finished_orders)})', callback_data='old_orders')
         keyboard.add(new_button)
         keyboard.add(old_button)
@@ -412,7 +412,6 @@ class BalanceDialog(models.Model):
         return 'Готово', None
 
     def input_adress_string(self, data: str):
-        self.flush()
         addr_variants = Backend.find_adress(data, self.chat_id)
         if len(addr_variants) == 0:
             return 'Такой адресс не найден, уточните адрес и повторите попытку', None
@@ -427,7 +426,6 @@ class BalanceDialog(models.Model):
     def input_cadastr_number(self, data: str):
         try:
             result = Backend.object_by_number(data, self.chat_id)
-            logger.debug(result)
         except NotFound:
             return 'Ничего не найдено, проверьте правильность ввода. ' \
                    'Если вы ввели все верно, возможно это временная проблема Росреестра', None
@@ -473,10 +471,7 @@ class BalanceDialog(models.Model):
         variant = self.data['search_results'][object_id]
         self.data['choosen_variant'] = variant
         self.set_resolver('press_on_service')
-        # logger.debug(self.data["choosen_variant"]["EGRN"]["object"]["ADDRESS"])
         text = f'<b>Информация по объекту</b>\n'
-        logger.debug(variant)
-        logger.debug(variant)
         for key, value in variant.items():
             text += f'\n<b>{key}</b>: {value}'
 

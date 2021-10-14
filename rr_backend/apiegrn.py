@@ -2,11 +2,12 @@ import json
 
 import aiohttp
 from django.conf import settings
-from rr_backend.rosreestr import NotFound
 from loguru import logger
 
-# APIEGRN_TOKEN = settings.APIEGRN_TOKEN
-APIEGRN_TOKEN = 'PXN3-L0OV-IE7C-A1FZ'
+from rr_backend.rosreestr import NotFound
+
+APIEGRN_TOKEN = settings.APIEGRN_TOKEN
+# APIEGRN_TOKEN = 'PXN3-L0OV-IE7C-A1FZ'
 SEARCH_URL = 'https://apiegrn.ru/api/cadaster/search'
 INFO_URL = 'https://apiegrn.ru/api/cadaster/objectInfoFull'
 
@@ -31,7 +32,7 @@ class ApiEgrnClient:
         async with aiohttp.ClientSession() as session:
             async with session.post(SEARCH_URL, json=data, headers=headers) as response:
                 result = await response.json()
-                logger.debug(result['objects'])
+                logger.debug(f'api_egrn: {result}')
                 return [{'nobjectCn': item['CADNOMER'], 'addressNotes': item['ADDRESS']} for
                         item in result['objects']]
 
@@ -46,7 +47,6 @@ class ApiEgrnClient:
             async with session.post(INFO_URL, json=data, headers=headers) as response:
                 text = await response.text()
                 variant = json.loads(text)
-                logger.debug(json.dumps(variant, ensure_ascii=False, indent=2))
                 if variant['error']:
                     if variant['error']['code'] == 'OBJECT_NOT_FOUND':
                         raise NotFound
@@ -62,10 +62,13 @@ class ApiEgrnClient:
                               f"({_get_from(variant['EGRN']['details'], 'Этажность') or '-'} эт.)",
                     # 'Год ввода': variant['EGRN']['details']['Кадастровый номер'] or ''
                     'Кадастровая стоимость': f"{_get_from(variant['EGRN']['details'], 'стоимость') or '-'} "
-                                             f"({_get_from(variant['EGRN']['details'] ,'Дата внесения стоимости') or '--.--.--'} г.)",
+                                             f"({_get_from(variant['EGRN']['details'], 'Дата внесения стоимости') or '--.--.--'} г.)",
                     'Площадь': _get_from(variant['EGRN']['details'], 'Площадь') or '',
-                    'Количество правообладателей': _get_from(variant['EGRN']['details'], 'Количество правообладателей') or '0',
-                    'Вид собственности': f"{variant['EGRN']['rights'][0]['type']} (от {variant['EGRN']['rights'][0]['date']} г.)" if variant['EGRN']['rights'] else 'незвестно',
+                    'Количество правообладателей': _get_from(variant['EGRN']['details'],
+                                                             'Количество правообладателей') or '0',
+                    'Вид собственности': f"{variant['EGRN']['rights'][0]['type']} (от {variant['EGRN']['rights'][0]['date']} г.)" if
+                    variant['EGRN']['rights'] else 'незвестно',
                     'Обременения': limits
                 }
+                logger.debug(output)
                 return output

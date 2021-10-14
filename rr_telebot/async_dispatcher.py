@@ -1,16 +1,12 @@
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.middlewares import BaseMiddleware
+from aiogram.types.input_file import InputFile
 from django.conf import settings
 from loguru import logger
-from aiogram.types.input_file import InputFile
 
-
-from rr_backend.backend import Backend
 from rr_telebot import database_handler
-from rr_telebot.database_handler import create_user, new_dialog, get_curent_step, get_price_list, save_dialog, \
-    get_dialog, create_order, save_dadata_varinants, pick_address, save_data_to_dialog
+from rr_telebot.database_handler import create_user
 from rr_telebot.template_message import *
-
 
 bot = Bot(token=settings.TELEGRAM_API_TOKEN)
 dp = Dispatcher(bot)
@@ -19,14 +15,14 @@ dp = Dispatcher(bot)
 class RegisterUserMiddleware(BaseMiddleware):
     @staticmethod
     async def on_process_message(message: types.Message, data):
-        user, created = await create_user(message.from_user.username, message.from_user.id)
+        user, created = await create_user(message.from_user.username or message.from_user.id, message.from_user.id)
         if created:
+            logger.debug(f'new user registred: {user.username}')
             keyboard = types.InlineKeyboardMarkup()
             url = types.InlineKeyboardButton(text='Сайт', url='http://127.0.0.1')
             keyboard.add(url)
             await message.answer(register_message.format(message.from_user.username))
             # await message.answer(start_message)
-
 
 
 @dp.message_handler(commands=['start'])
@@ -189,7 +185,8 @@ async def start_handler(message: types.Message):
 
 
 @dp.callback_query_handler()
-async def top_up_balance_handler(call: types.CallbackQuery):
+async def callback_handler(call: types.CallbackQuery):
+    logger.debug(call)
     await call.message.delete_reply_markup()
     result = await database_handler.BalanceDialog.async_callback_resolv(call)
     logger.debug(result)
@@ -201,20 +198,20 @@ async def top_up_balance_handler(call: types.CallbackQuery):
             if isinstance(markup, types.InputFile):
                 await bot.send_document(call.message.chat.id, markup)
             else:
-                logger.debug(text)
                 await call.message.answer(text, reply_markup=markup, parse_mode='HTML')
         elif text is not None:
             await call.message.answer(text, parse_mode='HTML')
 
 
 @dp.message_handler()
-async def take_amount_handler(message: types.Message):
+async def message_handler(message: types.Message):
+    logger.debug(message)
     result = await database_handler.BalanceDialog.async_message_resolv(message)
+    logger.debug(result)
     if not isinstance(result, list):
         result = [result]
     for item in result:
         text, markup = item
-        logger.debug(text, markup)
         if markup is not None:
             if isinstance(markup, types.InputFile):
                 await bot.send_document(message.chat.id, markup)
@@ -225,7 +222,7 @@ async def take_amount_handler(message: types.Message):
 
 
 def start(loglevel='INFO'):
-    logger.add('bot.log', level=loglevel)
+    # logger.add('bot.log', level=loglevel)
     dp.middleware.setup(RegisterUserMiddleware())
     executor.start_polling(dp)
 
