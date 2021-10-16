@@ -3,6 +3,7 @@ from aiogram.dispatcher.middlewares import BaseMiddleware
 from aiogram.types.input_file import InputFile
 from django.conf import settings
 from loguru import logger
+from rr_telebot.tasks import send_to_adm_group
 
 from rr_telebot import database_handler
 from rr_telebot.database_handler import create_user
@@ -18,24 +19,32 @@ class RegisterUserMiddleware(BaseMiddleware):
         user, created = await create_user(message.from_user.username or message.from_user.id, message.from_user.id)
         if created:
             logger.debug(f'new user registred: {user.username}')
+            send_to_adm_group.delay(f'новый пользователь: {user.username}')
             keyboard = types.InlineKeyboardMarkup()
             url = types.InlineKeyboardButton(text='Сайт', url='http://127.0.0.1')
             keyboard.add(url)
-            await message.answer(register_message.format(message.from_user.username))
+            # await message.answer(register_message.format(message.from_user.username))
             # await message.answer(start_message)
 
 
 @dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
+    text = '''Что может делать этот бот?
+
+Сервис по работе с недвижимостью
+К примеру: <b>Заказать выписку-отчет</b>
+
+'''
     keyboard = types.InlineKeyboardMarkup()
-    join_button = types.InlineKeyboardButton(text='Принять', callback_data='accept_conditions')
+    join_button = types.InlineKeyboardButton(text='Вступить', callback_data='join')
     keyboard.add(join_button)
-    await message.answer(start_message)
-    file1 = InputFile(settings.ROSREESTR_POLICY_FILE, filename='Политика конфеденциальности.doc')
-    file2 = InputFile(settings.ROSREESTR_OFFERTA_FILE, filename='Публичная оферта.doc')
-    await bot.send_document(message.chat.id, file1)
-    await bot.send_document(message.chat.id, file2)
-    await message.answer('Если вы согласны с условиями, нажмите:', reply_markup=keyboard)
+    await message.answer(text=text, reply_markup=keyboard, parse_mode='HTML')
+    # await message.answer(start_message)
+    # file1 = InputFile(settings.ROSREESTR_POLICY_FILE, filename='Политика конфеденциальности.doc')
+    # file2 = InputFile(settings.ROSREESTR_OFFERTA_FILE, filename='Публичная оферта.doc')
+    # await bot.send_document(message.chat.id, file1)
+    # await bot.send_document(message.chat.id, file2)
+    # await message.answer('Если вы согласны с условиями, нажмите:', reply_markup=keyboard)
 
 
 # def join_filter(call: types.CallbackQuery):

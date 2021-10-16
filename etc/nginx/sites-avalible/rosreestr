@@ -26,4 +26,8 @@ server {
     location /static/ {
     root /home/web/app/rosreestr/;
     }
+
+    location /media/ {
+    root /home/web/app/rosreestr/;
+    }
 }

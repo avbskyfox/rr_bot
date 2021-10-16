@@ -5,12 +5,13 @@ from aiogram import types, Bot
 from asgiref.sync import sync_to_async, async_to_sync
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from loguru import logger
 
-from cabinet.models import User, Service, Curency, Bill, Order, OrderException, BackendException
+from cabinet.models import User, Service, Curency, Bill, Order, OrderException, BackendException, Excerpt
 from rr_backend.backend import Backend
 from rr_backend.rosreestr import TemporaryUnavalible, NotFound
-from .tasks import update_bill_status
+from .tasks import update_bill_status, send_to_adm_group
 
 bot = Bot(token=settings.TELEGRAM_API_TOKEN)
 
@@ -68,6 +69,24 @@ def conditions_accepted_permission(method):
     return wraper
 
 
+class SearchHistory(models.Model):
+    class Meta:
+        verbose_name = 'История поисков'
+
+    user = models.OneToOneField(User, to_field='telegram_id',
+                                on_delete=models.CASCADE,
+                                verbose_name='Пользователь',
+                                db_index=True,
+                                primary_key=True)
+    data = models.JSONField(default=list, max_length=8096, verbose_name='Данные')
+
+    def save_to_history(self, dadata):
+        self.data.insert(0, dadata)
+        if len(self.data) > 5:
+            self.data.pop()
+        self.save()
+
+
 class BalanceDialog(models.Model):
     class Meta:
         verbose_name = 'Диалог'
@@ -107,6 +126,8 @@ class BalanceDialog(models.Model):
         obj.chat_id = callback.message.chat.id
         data = callback.data
         # refill dialog entry point
+        if data == 'join':
+            return obj.press_join(data)
         if data == 'refill':
             # obj.flush()
             return obj.press_refill(data)
@@ -135,19 +156,22 @@ class BalanceDialog(models.Model):
         obj.chat_id = message.chat.id
 
         # help message entry point
-        if text == 'Помощь':
+        if text == '🛎 Помощь':
             return obj.input_help(text)
         # purse entry point
-        if text == 'Кошелек':
+        if text == '💰 Кошелек':
             obj.flush()
             return obj.press_purse(text)
         # my account entry point
-        if text == 'Аккаунт':
+        if text == '⭐ Аккаунт':
             obj.flush()
             return obj.press_my_account(text)
-        if text == 'Заказы':
+        if text == '📝 Заказы':
             obj.flush()
             return obj.press_orders(text)
+        if text == '📝 История':
+            obj.flush()
+            return obj.press_history(text)
         if re.match(r'.* .* .*', text):
             obj.flush()
             return obj.input_adress_string(text)
@@ -175,6 +199,25 @@ class BalanceDialog(models.Model):
     def default_resolver(self, data):
         return f'Упс...\nВы тыкнули када то не туда :)\nИли сказали что-то непонятное :)\nПожалуйста, начните диалог заново.', None
 
+    def press_join(self, data):
+        if data == 'join':
+            keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            help_button = types.KeyboardButton('🛎 Помощь')
+            orders_button = types.KeyboardButton('📝 История')
+            account_button = types.KeyboardButton('⭐ Аккаунт')
+            purse_button = types.KeyboardButton('💰 Кошелек')
+            keyboard.add(help_button, account_button)
+            keyboard.add(orders_button, purse_button)
+            # keyboard.add(purse_button)
+            text = '''Привет! Это бот-помощник «Террагент»
+Территория для агентов по недвижимости.
+
+Здесь Вы можете:
++ Узнать информацию об объекте недвижимости (<b>Выписка-отчет</b>)
+
+'''
+            return [(text, keyboard), self.input_help('')]
+
     def press_download_conditions(self, data):
         keyboard = types.InlineKeyboardMarkup()
         join_button = types.InlineKeyboardButton(text='Принять', callback_data='accept_conditions')
@@ -199,6 +242,46 @@ class BalanceDialog(models.Model):
             return [('Теперь можете продолжить работу с сервисом', keyboard), self.input_help('')]
         else:
             return self.default_resolver(data)
+
+    def press_history(self, text: str):
+        histroy, _ = SearchHistory.objects.get_or_create(user=self.user)
+        message_list = [('Последние запросы:', None)]
+        data = histroy.data
+        data.reverse()
+        for i, item in enumerate(data):
+            keyboard = types.InlineKeyboardMarkup()
+            text = item['addr_variants']['value']
+            button = types.InlineKeyboardButton(text='Повторить', callback_data=f'history_{i}')
+            keyboard.add(button)
+            message_list.append((text, keyboard))
+        if len(message_list) > 1:
+            self.set_resolver('press_repeat')
+            return message_list
+        else:
+            self.flush()
+            return 'Вы еще ничего не искали...', None
+
+    def press_repeat(self, data: str):
+        if 'history' not in data:
+            return self.default_resolver(data)
+        history_id = int(data.split('_')[1])
+        history = SearchHistory.objects.get(user=self.user)
+        data = history.data[history_id]
+        self.data = data
+        self.save()
+        results = self.data['search_results']
+        self.set_resolver('press_on_object_variant')
+        text = 'Выберите объект:\n'
+        buttons = []
+        for i, result in enumerate(results):
+            text += f'\n<b>Объект {i + 1}:</b>'
+            buttons.append(types.InlineKeyboardButton(text=f'Объект {i + 1}', callback_data=f'object_{i}'))
+            text += f"\n{result['Кадастровый номер']} - {result['Адрес']}"
+            text += f"\nСтатус объекта: {result['Статус объекта']}\n"
+        keyboard = types.InlineKeyboardMarkup()
+        for button in buttons:
+            keyboard.add(button)
+        return text, keyboard
 
     def press_refill(self, data: str, message=None):
         # self.flush()
@@ -284,7 +367,11 @@ class BalanceDialog(models.Model):
 
     def input_help(self, text: str):
         # self.flush()
-        return '''Для поиска введите <b>адрес</b> или <b>кадастровый номер</b> объекта недвижимости''', None
+        return '''Для поиска введите <b>адрес</b> или <b>кадастровый номер</b> объекта недвижимости
+
+Например:
+<b>Пермь Революции 12 34</b> или <b>59:01:234567:89</b>
+''', None
 
     @conditions_accepted_permission
     def press_purse(self, tet: str):
@@ -307,9 +394,10 @@ class BalanceDialog(models.Model):
         # keyboard.add(referal)
         keyboard.add(change_email)
         # curency = Curency.objects.get(name__exact=settings.DEFAULT_CURENCY)
-        text = f'''<b>Ваш ID</b>: {self.user.telegram_id}
-<b>Email</b>: {self.user.email}
-<b>Баланс</b>: {self.user.purse_set.get(curency__name=settings.DEFAULT_CURENCY).ammount} {settings.DEFAULT_CURENCY}
+        text = f'''⭐️ <b>Ваш ID</b>: {self.user.telegram_id}
+💌 <b>Email</b>: {self.user.email}
+☎️ <b>Телефон</b>:
+💰 <b>Баланс</b>: {self.user.purse_set.get(curency__name=settings.DEFAULT_CURENCY).ammount} {settings.DEFAULT_CURENCY}
 '''
         # Вы с нами с: {self.user.date_joined.strftime('%d.%m.%Y')}
 
@@ -355,7 +443,8 @@ class BalanceDialog(models.Model):
         processed_orders = []
         finished_orders = []
         for order in orders:
-            if order.is_finished:
+            if order.is_finished and (order.date_created - timezone.now()) < \
+                    timezone.timedelta(days=settings.RRTELEBOT_ORDERS_AGE):
                 finished_orders.append(order)
             else:
                 processed_orders.append(order)
@@ -389,27 +478,31 @@ class BalanceDialog(models.Model):
             order_id = int(data.split(' ')[1])
             order = Order.objects.get(pk=order_id)
             text = f'Заказ № {order.number} от {order.date_created.strftime("%d.%m.%Y")}\n для адреса {order.address}\n'
+            message_list = [(text, None)]
             for exerpt in order.excerpt_set.all():
                 if not exerpt.is_delivered:
                     exerpt.check_status()
-                status = 'отправлена на почту' if exerpt.is_delivered else 'в обработке'
-                text += f'{exerpt.type.name}: {status}\n'
-            keyboard = types.InlineKeyboardMarkup()
-            button = types.InlineKeyboardButton(text='Получить на почту еще раз...', callback_data=f'order_{order.id}')
-            keyboard.add(button)
+                if exerpt.is_delivered:
+                    status = 'отправлена на почту'
+                    keyboard = types.InlineKeyboardMarkup()
+                    button = types.InlineKeyboardButton(text='Получить на почту...', callback_data=f'resend_{exerpt.id}')
+                    keyboard.add(button)
+                    message_list.append((f'{exerpt.type.name}: {status}\n', keyboard))
+                else:
+                    status = 'в обработке'
+                    message_list.append((f'{exerpt.type.name}: {status}\n', None))
             self.set_resolver('press_resend_docs')
-            return text, keyboard
+            return message_list
         return None, None
 
     def press_resend_docs(self, data: str):
-        if data.find('order_') == 0:
-            order_id = int(data.split('_')[1])
-            order = Order.objects.get(pk=order_id)
-            for excerpt in order.excerpt_set.all():
-                if excerpt.is_delivered:
-                    excerpt.send_docs()
+        if data.find('resend_') == 0:
+            excerpt_id = int(data.split('_')[1])
+            excerpt = Excerpt.objects.get(pk=excerpt_id)
+            if excerpt.is_delivered:
+                excerpt.send_docs()
         self.flush()
-        return 'Готово', None
+        return 'Отправил', None
 
     def input_adress_string(self, data: str):
         addr_variants = Backend.find_adress(data, self.chat_id)
@@ -421,7 +514,10 @@ class BalanceDialog(models.Model):
             keyboard = types.InlineKeyboardMarkup()
             button = types.InlineKeyboardButton(text='Далее', callback_data='next')
             keyboard.row(button)
-            return self.data['addr_variants']['value'], keyboard
+            text = f'''Адрес распознан как:
+<b>{self.data['addr_variants']['value']}</b>
+            '''
+            return text, keyboard
 
     def input_cadastr_number(self, data: str):
         try:
@@ -433,33 +529,39 @@ class BalanceDialog(models.Model):
         return self.press_on_object_variant('object_0')
 
     def press_next_on_adsress(self, data: str):
-        if data != 'next':
-            return self.default_resolver(data)
-        try:
-            results = Backend.objects_by_address(self.data['addr_variants'], self.chat_id)
-        except (TimeoutError, TemporaryUnavalible):
-            return 'Cервисы Росреестра в настоящий момент недоступны, попробуйте позже', None
-        except:
-            logger.exception(f'Error on search address: {self.data["addr_variants"]["value"]}')
-            return 'Низвестная ошибка!!! Мы уже разбираемся с этим', None
+        if self.user.check_free_search():
+            if data != 'next':
+                return self.default_resolver(data)
+            try:
+                results = Backend.objects_by_address(self.data['addr_variants'], self.chat_id)
+            except (TimeoutError, TemporaryUnavalible):
+                return 'Cервисы Росреестра в настоящий момент недоступны, попробуйте позже', None
+            except:
+                logger.exception(f'Error on search address: {self.data["addr_variants"]["value"]}')
+                return 'Низвестная ошибка!!! Мы уже разбираемся с этим', None
 
-        if len(results) == 0:
-            return 'К сожалению не удалось найти информацию об объекте', None
+            if len(results) == 0:
+                return 'К сожалению не удалось найти информацию об объекте', None
 
-        self.data['search_results'] = results
-        self.set_resolver('press_on_object_variant')
-        text = str()
-        buttons = []
-        for i, result in enumerate(results):
-            text += f'\n<b>Объект {i + 1}:</b>'
-            buttons.append(types.InlineKeyboardButton(text=f'Объект {i + 1}', callback_data=f'object_{i}'))
-            text += f"\n{result['Кадастровый номер']} - {result['Адрес']}"
-            text += f"\nСтатус объекта: {result['Статус объекта']}\n"
+            self.data['search_results'] = results
+            history, _ = SearchHistory.objects.get_or_create(user=self.user)
+            history.save_to_history(self.data)
+            self.set_resolver('press_on_object_variant')
+            text = 'Выберите объект:\n'
+            buttons = []
+            for i, result in enumerate(results):
+                text += f'\n<b>Объект {i + 1}:</b>'
+                buttons.append(types.InlineKeyboardButton(text=f'Объект {i + 1}', callback_data=f'object_{i}'))
+                text += f"\n{result['Кадастровый номер']} - {result['Адрес']}"
+                text += f"\nСтатус объекта: {result['Статус объекта']}\n"
 
-        keyboard = types.InlineKeyboardMarkup()
-        for button in buttons:
-            keyboard.add(button)
-        return text, keyboard
+            keyboard = types.InlineKeyboardMarkup()
+            for button in buttons:
+                keyboard.add(button)
+            self.user.increase_search_count()
+            return text, keyboard
+        else:
+            return 'Вы превысили количество бесплатных посиков в день...', None
 
     def press_on_object_variant(self, data: str):
 

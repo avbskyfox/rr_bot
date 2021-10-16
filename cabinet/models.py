@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db import transaction
+from django.utils import timezone
 from redis import Redis
 from redis.lock import Lock
 
@@ -30,6 +31,30 @@ class BackendException(Exception):
 class User(AbstractUser):
     telegram_id = models.CharField(max_length=100, blank=True, db_index=True, unique=True)
     conditions_accepted = models.BooleanField(default=False)
+
+    free_search_max = models.IntegerField(default=0, verbose_name='Количество бесплатных посиков в сутки')
+    search_count = models.IntegerField(default=0, verbose_name='Счетчик посиков')
+    last_search_date = models.DateTimeField(default=timezone.now)
+
+    def check_free_search(self):
+        if self.free_search_max != 0:
+            max_search = self.free_search_max
+        else:
+            max_search = settings.FREE_SEARCH_MAX
+        now = timezone.now().today()
+        if self.last_search_date.day == now.day and self.last_search_date.month == now.month:
+            if self.search_count < max_search:
+                return True
+        else:
+            self.search_count = 0
+            self.save()
+            return True
+        return False
+
+    def increase_search_count(self):
+        self.search_count += 1
+        self.last_search_date = timezone.now()
+        self.save()
 
     def __str__(self):
         return f'{self.telegram_id}'
