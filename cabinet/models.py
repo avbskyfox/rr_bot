@@ -35,6 +35,7 @@ class User(AbstractUser):
     free_search_max = models.IntegerField(default=0, verbose_name='Количество бесплатных посиков в сутки')
     search_count = models.IntegerField(default=0, verbose_name='Счетчик посиков')
     last_search_date = models.DateTimeField(default=timezone.now)
+    phone_number = models.TextField(max_length=12, blank=True)
 
     def check_free_search(self):
         if self.free_search_max != 0:

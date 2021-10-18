@@ -230,6 +230,25 @@ async def message_handler(message: types.Message):
             await message.answer(text, parse_mode='HTML')
 
 
+@dp.message_handler(content_types='contact')
+async def contact_handler(message):
+    logger.debug(message)
+    result = await database_handler.BalanceDialog.async_contact_resolv(message)
+    logger.debug(result)
+    if not isinstance(result, list):
+        result = [result]
+    for item in result:
+        text, markup = item
+        if markup is not None:
+            if isinstance(markup, types.InputFile):
+                await bot.send_document(message.chat.id, markup)
+            else:
+                await message.answer(text, reply_markup=markup, parse_mode='HTML')
+        elif text is not None:
+            await message.answer(text, parse_mode='HTML')
+
+
+
 def start(loglevel='INFO'):
     # logger.add('bot.log', level=loglevel)
     dp.middleware.setup(RegisterUserMiddleware())

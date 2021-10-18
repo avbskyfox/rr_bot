@@ -56,16 +56,38 @@ class Dialog(models.Model):
         self.save()
 
 
+# def conditions_accepted_permission(cls):
+#    for name, method in cls.__dict__.iteritems():
+#         if hasattr(method, "use_class"):
+#             # do something with the method and class
+#
+#    return cls
+
+
 def conditions_accepted_permission(method):
     def wraper(*args, **kwargs):
+        def is_done_char(expression: bool):
+            return '✅' if expression else '❌'
         user = args[0].user
-        if user.conditions_accepted:
-            return method(*args, **kwargs)
-        else:
+        is_condition = user.conditions_accepted
+        is_email = True if user.email != '' else False
+        is_phone = True if user.phone_number != '' else False
+        try:
+            assert is_condition
+            assert is_email
+            assert is_phone
+        except AssertionError:
             keyboard = types.InlineKeyboardMarkup()
-            button = types.InlineKeyboardButton(text='Скачать документы', callback_data='download_conditions')
+            button = types.InlineKeyboardButton(text='Продолжить', callback_data='authorization')
             keyboard.add(button)
-            return 'Чтобы продолжить необходимо принять условия пользования сервисом', keyboard
+            text = f'''Для того, что бы пользоваться сервисом необходимо авторизоваться. Для этого пройдите три простых шага:
+{is_done_char(is_email)} Введите адресс электронной почты
+{is_done_char(is_phone)} Введите номер телефона
+{is_done_char(is_condition)} Примите условия использования сервиса
+            '''
+            return text, keyboard
+        else:
+            return method(*args, **kwargs)
     return wraper
 
 
@@ -135,12 +157,15 @@ class BalanceDialog(models.Model):
         if data == 'change_email':
             obj.flush()
             return obj.press_change_email(data)
+        if data == 'change_phone':
+            obj.flush()
+            return obj.press_change_phone(data)
         if data == 'orders':
             obj.flush()
             return obj.press_orders(data)
-        if data == 'download_conditions':
+        if data == 'authorization':
             # obj.flush()
-            return obj.press_download_conditions(data)
+            return obj.press_authorization(data)
         if data == 'accept_conditions':
             # obj.flush()
             return obj.press_accept_conditions(data)
@@ -184,14 +209,26 @@ class BalanceDialog(models.Model):
         return resolver(text)
 
     @classmethod
+    def contact_resolv(cls, message: types.Message):
+        user_id = message.from_user.id
+        obj, _ = cls.objects.get_or_create(pk=user_id)
+        obj.chat_id = message.chat.id
+        return obj.input_phone(message)
+
+    @classmethod
     @sync_to_async
     def async_callback_resolv(cls, callback: types.CallbackQuery):
         return cls.callback_resolv(callback)
 
     @classmethod
     @sync_to_async
-    def async_message_resolv(cls, message: types.CallbackQuery):
+    def async_message_resolv(cls, message: types.Message):
         return cls.message_resolv(message)
+
+    @classmethod
+    @sync_to_async
+    def async_contact_resolv(cls, message: types.CallbackQuery):
+        return cls.contact_resolv(message)
 
     def get_resolver(self):
         return getattr(self, str(self.resolver), self.default_resolver)
@@ -218,14 +255,33 @@ class BalanceDialog(models.Model):
 '''
             return [(text, keyboard), self.input_help('')]
 
-    def press_download_conditions(self, data):
-        keyboard = types.InlineKeyboardMarkup()
-        join_button = types.InlineKeyboardButton(text='Принять', callback_data='accept_conditions')
-        keyboard.add(join_button)
-        file1 = types.InputFile(settings.ROSREESTR_POLICY_FILE, filename='политика.doc')
-        file2 = types.InputFile(settings.ROSREESTR_OFFERTA_FILE, filename='оферта.doc')
-        self.set_resolver('press_accept_conditions')
-        return [(None, file1), (None, file2), ('Если вы согласны с условиями, нажмите кнопку', keyboard)]
+    def press_authorization(self, data):
+        if data != 'authorization':
+            return self.default_resolver(data)
+        is_condition = self.user.conditions_accepted
+        is_email = True if self.user.email != '' else False
+        is_phone = True if self.user.phone_number != '' else False
+        if not is_email:
+            self.data['return_to_authorization'] = True
+            self.data['return_data'] = data
+            self.set_resolver('input_email')
+            return 'Для начала укажите Ваш email. На него мы будем отправлять чеки и документы:', None
+        if not is_phone:
+            self.data['return_to_authorization'] = True
+            self.data['return_data'] = data
+            self.set_resolver('input_email')
+            return self.press_change_phone('data')
+        if not is_condition:
+            keyboard = types.InlineKeyboardMarkup()
+            button = types.InlineKeyboardButton(text='Принять условия', callback_data='accept_conditions')
+            keyboard.add(button)
+            message1 = '''Ознакомтесь с публичной офертой:
+<a href="http://terragent.ru/media/docs/offerta.pdf"> Публичная офферта </a>'''
+            message2 = '''А также с политикой конфеденциальности:
+<a href="http://terragent.ru/media/docs/policy.pdf"> Политика конфеденциальности </a>
+    '''
+            self.set_resolver('press_accept_conditions')
+            return [(message1, None), (message2, None), ('Если вы согласны с условиями, нажмите кнопку', keyboard)]
 
     def press_accept_conditions(self, data):
         if data == 'accept_conditions':
@@ -233,13 +289,13 @@ class BalanceDialog(models.Model):
             self.user.save()
             self.flush()
             keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            help_button = types.KeyboardButton('Помощь')
-            orders_button = types.KeyboardButton('Заказы')
-            account_button = types.KeyboardButton('Аккаунт')
-            purse_button = types.KeyboardButton('Кошелек')
-            keyboard.add(help_button, account_button)
-            keyboard.add(orders_button, purse_button)
-            return [('Теперь можете продолжить работу с сервисом', keyboard), self.input_help('')]
+            # help_button = types.KeyboardButton('Помощь')
+            # orders_button = types.KeyboardButton('Заказы')
+            # account_button = types.KeyboardButton('Аккаунт')
+            # purse_button = types.KeyboardButton('Кошелек')
+            # keyboard.add(help_button, account_button)
+            # keyboard.add(orders_button, purse_button)
+            return [('Теперь можете продолжить работу с сервисом', None), self.input_help('')]
         else:
             return self.default_resolver(data)
 
@@ -385,25 +441,27 @@ class BalanceDialog(models.Model):
     def press_my_account(self, text: str):
         # self.flush()
         keyboard = types.InlineKeyboardMarkup()
-        top_up_balance = types.InlineKeyboardButton(text='Поплнить баланс', callback_data='refill')
-        orders = types.InlineKeyboardButton(text='Заказы', callback_data='orders')
+        top_up_balance = types.InlineKeyboardButton(text='💰 Поплнить баланс', callback_data='refill')
+        orders = types.InlineKeyboardButton(text='📝 Заказы', callback_data='orders')
         # referal = types.InlineKeyboardButton(text='Рефералка', callback_data='referal')
-        change_email = types.InlineKeyboardButton(text='Изменить email', callback_data='change_email')
+        change_email = types.InlineKeyboardButton(text='💌 Изменить email', callback_data='change_email')
+        change_phone = types.InlineKeyboardButton(text='☎️ Изменить телефон', callback_data='change_phone')
         keyboard.add(top_up_balance)
         keyboard.add(orders)
         # keyboard.add(referal)
         keyboard.add(change_email)
+        keyboard.add(change_phone)
         # curency = Curency.objects.get(name__exact=settings.DEFAULT_CURENCY)
         text = f'''⭐️ <b>Ваш ID</b>: {self.user.telegram_id}
 💌 <b>Email</b>: {self.user.email}
-☎️ <b>Телефон</b>:
+☎️ <b>Телефон</b>: {self.user.phone_number}
 💰 <b>Баланс</b>: {self.user.purse_set.get(curency__name=settings.DEFAULT_CURENCY).ammount} {settings.DEFAULT_CURENCY}
 '''
         # Вы с нами с: {self.user.date_joined.strftime('%d.%m.%Y')}
 
         return text, keyboard
 
-    @conditions_accepted_permission
+    # @conditions_accepted_permission
     def press_change_email(self, data):
         # self.flush()
         self.set_resolver('input_email')
@@ -420,7 +478,8 @@ class BalanceDialog(models.Model):
         if regexp.match(text):
             self.user.email = text.lower()
             self.user.save()
-            if self.data['return_to']:
+            if self.data.get('return_to', None):
+                # if self.data['return_to'] == ''
                 self.set_resolver(self.data['return_to'])
                 keyboard = types.InlineKeyboardMarkup()
                 button1 = types.InlineKeyboardButton(text=f'100 {settings.DEFAULT_CURENCY}', callback_data=100)
@@ -430,13 +489,41 @@ class BalanceDialog(models.Model):
                 keyboard.row(button1, button2)
                 keyboard.row(button3, button4)
                 return f'email изменен на: {self.user.email} \n{self.data["return_message"]}', keyboard
+            elif self.data.get('return_to_authorization', None):
+                return self.press_authorization(self.data['return_data'])
             else:
                 self.flush()
             return f'email изменен на: {self.user.email}', None
         else:
             return 'Это не похоже на правильный email', None
 
-    @conditions_accepted_permission
+    def press_change_phone(self, data: str):
+        self.set_resolver('input_phone')
+        keyboard = types.ReplyKeyboardMarkup()
+        button1 = types.KeyboardButton(text='Поделиться', request_contact=True)
+        button2 = types.KeyboardButton(text='Отмена')
+        keyboard.add(button1)
+        keyboard.add(button2)
+        return 'Поделитесь с нами Вашим номером тедлефона:', keyboard
+
+    def input_phone(self, message: types.Message):
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        help_button = types.KeyboardButton('🛎 Помощь')
+        orders_button = types.KeyboardButton('📝 История')
+        account_button = types.KeyboardButton('⭐ Аккаунт')
+        purse_button = types.KeyboardButton('💰 Кошелек')
+        keyboard.add(help_button, account_button)
+        keyboard.add(orders_button, purse_button)
+        if not isinstance(message, types.Message):
+            text = '''Для работы с сервисом необходимо указать номер телефона
+            '''
+            return text, keyboard
+        self.user.phone_number = message.contact.phone_number
+        self.user.save()
+        if self.data.get('return_to_authorization', None):
+            return [('Спасибо', keyboard), self.press_authorization(self.data['return_data'])]
+        return 'Спасибо', keyboard
+
     def press_orders(self, data: str):
         # self.flush()
         orders = self.user.order_set.all()
