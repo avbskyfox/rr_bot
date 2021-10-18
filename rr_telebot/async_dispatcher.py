@@ -2,6 +2,7 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.middlewares import BaseMiddleware
 from django.conf import settings
 from loguru import logger
+import asyncio
 
 from rr_telebot import database_handler
 from rr_telebot.database_handler import create_user
@@ -250,6 +251,7 @@ def start(loglevel='INFO'):
     # logger.add('bot.log', level=loglevel)
     dp.middleware.setup(RegisterUserMiddleware())
     executor.start_polling(dp)
+    # executor.start()
 
 
 if __name__ == '__main__':

@@ -51,7 +51,7 @@ class ApiEgrnClient:
                     if variant['error']['code'] == 'OBJECT_NOT_FOUND':
                         raise NotFound
                 if variant['EGRN'].get('rights'):
-                    limits = 'Зафиксированы' if len(variant['EGRN']['rights'][0]['limits']) > 0 else 'Не зафиксированы'
+                    limits = 'Зафиксированы' if len(variant['EGRN']['rights'][0].get('limits', [])) > 0 else 'Не зафиксированы'
                 else:
                     limits = '-'
                 output = {

@@ -216,17 +216,17 @@ class BalanceDialog(models.Model):
         return obj.input_phone(message)
 
     @classmethod
-    @sync_to_async
+    @sync_to_async(thread_sensitive=False)
     def async_callback_resolv(cls, callback: types.CallbackQuery):
         return cls.callback_resolv(callback)
 
     @classmethod
-    @sync_to_async
+    @sync_to_async(thread_sensitive=False)
     def async_message_resolv(cls, message: types.Message):
         return cls.message_resolv(message)
 
     @classmethod
-    @sync_to_async
+    @sync_to_async(thread_sensitive=False)
     def async_contact_resolv(cls, message: types.CallbackQuery):
         return cls.contact_resolv(message)
 
