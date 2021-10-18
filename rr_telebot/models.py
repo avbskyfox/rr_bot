@@ -624,10 +624,12 @@ class BalanceDialog(models.Model):
             except (TimeoutError, TemporaryUnavalible):
                 return 'Cервисы Росреестра в настоящий момент недоступны, попробуйте позже', None
             except:
-                logger.exception(f'Error on search address: {self.data["addr_variants"]["value"]}')
+                send_to_adm_group.delay(f'Исключение при поиске: {self.data["addr_variants"]["value"]}')
+                logger.exception(f'Exeption on search address: {self.data["addr_variants"]["value"]}')
                 return 'Низвестная ошибка!!! Мы уже разбираемся с этим', None
 
             if len(results) == 0:
+                send_to_adm_group.delay(f'Адрес не найден: {self.data["addr_variants"]["value"]}')
                 return 'К сожалению не удалось найти информацию об объекте', None
 
             self.data['search_results'] = results

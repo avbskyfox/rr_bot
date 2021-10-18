@@ -7,6 +7,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db import transaction
 from django.utils import timezone
+from loguru import logger
 from redis import Redis
 from redis.lock import Lock
 
@@ -327,6 +328,12 @@ class Bill(models.Model):
                     purse = self.user.purse_set.get(curency=self.curency)
                     purse.ammount += self.amount / 100
                     purse.save()
+                    logger.debug(f'оплачен счет ползователем {self.user.username} на сумму {self.amount / 100}')
+                    try:
+                        from rr_telebot.tasks import send_to_adm_group
+                        send_to_adm_group.delay(f'{self.user.username} пополнил счет на {self.amount / 100}')
+                    finally:
+                        pass
                 if self.payment.is_canceled:
                     self.delete()
             else:

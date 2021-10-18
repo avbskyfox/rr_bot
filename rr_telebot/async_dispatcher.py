@@ -1,13 +1,11 @@
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.middlewares import BaseMiddleware
-from aiogram.types.input_file import InputFile
 from django.conf import settings
 from loguru import logger
-from rr_telebot.tasks import send_to_adm_group
 
 from rr_telebot import database_handler
 from rr_telebot.database_handler import create_user
-from rr_telebot.template_message import *
+from rr_telebot.tasks import send_to_adm_group
 
 bot = Bot(token=settings.TELEGRAM_API_TOKEN)
 dp = Dispatcher(bot)
@@ -246,7 +244,6 @@ async def contact_handler(message):
                 await message.answer(text, reply_markup=markup, parse_mode='HTML')
         elif text is not None:
             await message.answer(text, parse_mode='HTML')
-
 
 
 def start(loglevel='INFO'):
