@@ -499,7 +499,7 @@ class BalanceDialog(models.Model):
 
     def press_change_phone(self, data: str):
         self.set_resolver('input_phone')
-        keyboard = types.ReplyKeyboardMarkup()
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
         button1 = types.KeyboardButton(text='Поделиться', request_contact=True)
         button2 = types.KeyboardButton(text='Отмена')
         keyboard.add(button1)
