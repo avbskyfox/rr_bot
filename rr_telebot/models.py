@@ -273,7 +273,7 @@ class BalanceDialog(models.Model):
             return self.press_change_phone('data')
         if not is_condition:
             keyboard = types.InlineKeyboardMarkup()
-            button = types.InlineKeyboardButton(text='Принять условия', callback_data='accept_conditions')
+            button = types.InlineKeyboardButton(text='✅ Принять условия', callback_data='accept_conditions')
             keyboard.add(button)
             message1 = '''Ознакомтесь с публичной офертой:
 <a href="http://terragent.ru/media/docs/offerta.pdf"> Публичная офферта </a>'''
@@ -500,11 +500,11 @@ class BalanceDialog(models.Model):
     def press_change_phone(self, data: str):
         self.set_resolver('input_phone')
         keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        button1 = types.KeyboardButton(text='Поделиться', request_contact=True)
-        button2 = types.KeyboardButton(text='Отмена')
+        button1 = types.KeyboardButton(text='✅ Поделиться', request_contact=True)
+        button2 = types.KeyboardButton(text='❌ Отмена')
         keyboard.add(button1)
         keyboard.add(button2)
-        return 'Поделитесь с нами Вашим номером тедлефона:', keyboard
+        return 'Поделитесь с нами Вашим номером телефона:', keyboard
 
     def input_phone(self, message: types.Message):
         keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
