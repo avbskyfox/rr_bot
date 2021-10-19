@@ -234,7 +234,7 @@ class BalanceDialog(models.Model):
         return getattr(self, str(self.resolver), self.default_resolver)
 
     def default_resolver(self, data):
-        return f'Упс...\nВы тыкнули када то не туда :)\nИли сказали что-то непонятное :)\nПожалуйста, начните диалог заново.', None
+        return f'Упс...\nВы нажали куда-то не туда :)\nИли сказали что-то непонятное :)\nПожалуйста, начните диалог заново.', None
 
     def press_join(self, data):
         if data == 'join':
