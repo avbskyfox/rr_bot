@@ -66,7 +66,7 @@ class ApiEgrnClient:
                     'Площадь': _get_from(variant['EGRN']['details'], 'Площадь') or '',
                     'Количество правообладателей': _get_from(variant['EGRN']['details'],
                                                              'Количество правообладателей') or '0',
-                    'Вид собственности': f"{variant['EGRN']['rights'][0]['type']} (от {variant['EGRN']['rights'][0]['date']} г.)" if
+                    'Вид собственности': f"{variant['EGRN']['rights'][0]['type']} (от {variant['EGRN']['rights'][0]['date'] or ''} г.)" if
                     variant['EGRN']['rights'] else 'незвестно',
                     'Обременения': limits
                 }

@@ -47,7 +47,7 @@ class User(AbstractUser):
             max_search = self.free_search_max
         else:
             max_search = settings.FREE_SEARCH_MAX
-        return max_search - self.search_count
+        return f'{max_search - self.search_count}/{max_search}'
 
     def check_free_search(self):
         if self.free_search_max != 0:

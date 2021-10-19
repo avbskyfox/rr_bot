@@ -1,6 +1,7 @@
 from asyncio import sleep
 
 from asgiref.sync import async_to_sync
+from loguru import logger
 
 
 from rr_backend.apiegrn import ApiEgrnClient
@@ -73,14 +74,18 @@ class Backend:
                 if await obj_filter(item):
                     filtred_objects.append(item)
             result = []
+            if len(filtred_objects) == 0:
+                filtred_objects = objects
             for item in filtred_objects:
                 try:
+                    logger.debug(item)
                     info = await cls.async_object_by_number(item['nobjectCn'], chat_id)
+                    logger.debug(info)
                     result.append(info)
                 except NotFound:
                     pass
             if len(result) == 0:
-                raise TimeoutError('не найдена инфомрация ни по одному объекту')
+                raise NotFound('не найдена инфомрация ни по одному объекту')
         except NotFound:
             send_progress_message.delay(chat_id, 'ищем информацию...')
             objects = await ApiEgrnClient.search(dadata['value'])

@@ -561,6 +561,8 @@ class BalanceDialog(models.Model):
             keyboard.add(button)
             result.append((text, keyboard))
         self.set_resolver('press_view_order')
+        if len(result) == 0:
+            return 'У вас пока нет исполненных (обрабатываемых) заказов', None
         return result
 
     def press_view_order(self, data: str):
@@ -602,7 +604,7 @@ class BalanceDialog(models.Model):
             self.data = {'addr_variants': addr_variants[0]}
             self.set_resolver('press_next_on_adsress')
             keyboard = types.InlineKeyboardMarkup()
-            button = types.InlineKeyboardButton(text=f'Далее (осталось {self.user.searches_remain} сегодня)', callback_data='next')
+            button = types.InlineKeyboardButton(text=f'Далее ({self.user.searches_remain})', callback_data='next')
             keyboard.row(button)
             text = f'''Адрес распознан как:
 <b>{self.data['addr_variants']['value']}</b>
@@ -625,6 +627,8 @@ class BalanceDialog(models.Model):
             try:
                 results = Backend.objects_by_address(self.data['addr_variants'], self.chat_id)
             except (TimeoutError, TemporaryUnavalible):
+                send_to_adm_group.delay(f'Недоступны сервисы при поиске: {self.data["addr_variants"]["value"]}')
+                logger.debug(f'timeout_error or temporary_unavalible, addr: {self.data["addr_variants"]["value"]}')
                 return 'Cервисы Росреестра в настоящий момент недоступны, попробуйте позже...', None
             except:
                 send_to_adm_group.delay(f'Исключение при поиске: {self.data["addr_variants"]["value"]}')
