@@ -41,6 +41,14 @@ class User(AbstractUser):
     last_search_date = models.DateTimeField(default=timezone.now)
     phone_number = models.TextField(max_length=12, blank=True)
 
+    @property
+    def searches_remain(self):
+        if self.free_search_max != 0:
+            max_search = self.free_search_max
+        else:
+            max_search = settings.FREE_SEARCH_MAX
+        return max_search - self.search_count
+
     def check_free_search(self):
         if self.free_search_max != 0:
             max_search = self.free_search_max

@@ -602,7 +602,7 @@ class BalanceDialog(models.Model):
             self.data = {'addr_variants': addr_variants[0]}
             self.set_resolver('press_next_on_adsress')
             keyboard = types.InlineKeyboardMarkup()
-            button = types.InlineKeyboardButton(text='Далее', callback_data='next')
+            button = types.InlineKeyboardButton(text=f'Далее (осталось {self.user.searches_remain} сегодня)', callback_data='next')
             keyboard.row(button)
             text = f'''Адрес распознан как:
 <b>{self.data['addr_variants']['value']}</b>
