@@ -28,14 +28,15 @@ class RegisterUserMiddleware(BaseMiddleware):
 
 @dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
-    text = '''Что может делать этот бот?
+    text = '''Что умеет делать этот бот?
 
-Сервис по работе с недвижимостью
-К примеру: <b>Заказать выписку-отчет</b>
+Он является сервисом по работе с недвижимостью, здесь вы можете:
+✔ Заказать выписку (отчет) об объекте недвижимости и получить её на свою электронную почту;
+✔ Запросить краткую информацию об объекте недвижимости по его адресу или кадастровому номеру.
 
 '''
     keyboard = types.InlineKeyboardMarkup()
-    join_button = types.InlineKeyboardButton(text='Вступить', callback_data='join')
+    join_button = types.InlineKeyboardButton(text='✅ Начнем!', callback_data='join')
     keyboard.add(join_button)
     await message.answer(text=text, reply_markup=keyboard, parse_mode='HTML')
     # await message.answer(start_message)

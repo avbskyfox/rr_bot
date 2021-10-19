@@ -1,5 +1,6 @@
 import importlib
 import time
+import random
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
@@ -14,6 +15,8 @@ from redis.lock import Lock
 from notifiers.smtp import send_mail
 from rr_backend.backend import Backend
 from tinkoff_kassa.models import PaymentModel
+
+random.seed()
 
 redis = Redis()
 
@@ -141,15 +144,30 @@ class Service(models.Model):
         return self.name
 
 
+def bill_number_generator():
+    with redis.lock('last_bill'):
+        with open('last_bill', 'r') as f:
+            last = int(f.read())
+        number = last + random.randint(1, 9)
+        with open('last_int', 'w') as f:
+            f.write(str(number))
+        return hex(number).split('x')[1]
+
+
+def order_number_generator():
+    with redis.lock('last_order'):
+        with open('last_order', 'r') as f:
+            last = int(f.read())
+        number = last + random.randint(1, 9)
+        with open('last_int', 'w') as f:
+            f.write(str(number))
+        return hex(number).split('x')[1]
+
+
 class Order(models.Model):
     class Meta:
         verbose_name = 'Заказ'
         verbose_name_plural = 'Заказы'
-
-    # todo поле number нужно переделать
-    @property
-    def number(self):
-        return str(hex(int(time.time()) + self.id)).split('x')[1]
 
     @property
     def is_finished(self):
@@ -167,6 +185,7 @@ class Order(models.Model):
     service = models.ForeignKey(Service, on_delete=models.SET_NULL, null=True, verbose_name='Услуга')
     price = models.IntegerField(verbose_name='Цена', null=True)
     date_created = models.DateTimeField(auto_now_add=True)
+    number = models.CharField(max_length=20, default=order_number_generator)
 
     @classmethod
     @transaction.atomic
@@ -279,6 +298,7 @@ class Bill(models.Model):
         verbose_name = 'Счет'
         verbose_name_plural = 'Счета'
 
+    number = models.CharField(max_length=20, default=bill_number_generator)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, db_index=True, verbose_name='Пользователь', null=True)
     curency = models.ForeignKey(Curency, on_delete=models.SET_NULL, verbose_name='Внутренняя валюта', null=True)
     amount = models.IntegerField(verbose_name='Кол-во внутренней валюты')
@@ -290,9 +310,9 @@ class Bill(models.Model):
     def __str__(self):
         return f'{self.user} - {self.amount} {self.curency}'
 
-    @property
-    def number(self):
-        return str(hex(int(time.time()) + self.id)).split('x')[1]
+    # @property
+    # def number(self):
+    #     return str(hex(int(time.time()) + self.id)).split('x')[1]
 
     def create_payment(self):
         params = {
@@ -328,10 +348,10 @@ class Bill(models.Model):
                     purse = self.user.purse_set.get(curency=self.curency)
                     purse.ammount += self.amount / 100
                     purse.save()
-                    logger.debug(f'оплачен счет ползователем {self.user.username} на сумму {self.amount / 100}')
+                    logger.debug(f'оплачен счет {self.number} ползователем {self.user.username} на сумму {self.amount / 100}')
                     try:
                         from rr_telebot.tasks import send_to_adm_group
-                        send_to_adm_group.delay(f'{self.user.username} пополнил счет на {self.amount / 100}')
+                        send_to_adm_group.delay(f'{self.user.username} пополнил счет {self.number} на {self.amount / 100}')
                     finally:
                         pass
                 if self.payment.is_canceled:
