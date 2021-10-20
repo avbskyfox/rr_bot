@@ -624,7 +624,7 @@ class BalanceDialog(models.Model):
     def make_feedback(self, data: str):
         if data == 'review':
             self.set_resolver('input_review')
-            return 'Напишите, что Вы думаете о нас'
+            return 'Напишите, что Вы думаете о нас', None
         if data == 'report_probem':
             self.set_resolver('input_problem')
             return 'Напишите о проблеме, мы немедленно займемся ее устранением. Обратите внимание, что все ' \

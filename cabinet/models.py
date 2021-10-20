@@ -43,6 +43,7 @@ class User(AbstractUser):
 
     @property
     def searches_remain(self):
+        self.check_free_search()
         if self.free_search_max != 0:
             max_search = self.free_search_max
         else:
