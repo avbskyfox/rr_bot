@@ -8,8 +8,10 @@ redis = Redis(host=settings.CACHING_MIDDLEWARE_REDIS_HOST,
               port=settings.CACHING_MIDDLEWARE_REDIS_PORT,
               db=settings.CACHING_MIDDLEWARE_REDIS_DB)
 
+cash_ttl = settings.CASH_TTL
 
-def cached_call(method, ttl=86400):
+
+def cached_call(method, ttl=cash_ttl):
     def wraper(*args, **kwargs):
         key_str = pickle.dumps({'args': args, 'kwargs': kwargs})
         # logger.debug(f'cashed key len: {len(key_str)}')
@@ -25,7 +27,7 @@ def cached_call(method, ttl=86400):
     return wraper
 
 
-def async_cashed_call(method, ttl=86400):
+def async_cashed_call(method, ttl=cash_ttl):
     async def wraper(*args, **kwargs):
         key_str = pickle.dumps({'args': args, 'kwargs': kwargs})
         # logger.debug(f'cashed key len: {len(key_str)}')

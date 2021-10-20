@@ -10,3 +10,4 @@ class TicketModelAdmin(admin.ModelAdmin):
 
 admin.site.register(Ticket, TicketModelAdmin)
 admin.site.register(Review)
+admin.site.register(SearchHistory)

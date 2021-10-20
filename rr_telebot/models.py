@@ -94,12 +94,26 @@ class SearchHistory(models.Model):
                                 db_index=True,
                                 primary_key=True)
     data = models.JSONField(default=list, max_length=8192, verbose_name='Данные')
+    last_search_date = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return str(f'{self.user.username}')
 
     def save_to_history(self, dadata):
+        self.delete_yestoday()
+        self.last_search_date = timezone.now()
         self.data.insert(0, dadata)
         if len(self.data) > 5:
             self.data.pop()
         self.save()
+
+    def delete_yestoday(self):
+        now = timezone.now().today()
+        if self.last_search_date.day == now.day and self.last_search_date.month == now.month:
+            pass
+        else:
+            self.data = []
+            self.save()
 
 
 class BalanceDialog(models.Model):
@@ -297,6 +311,7 @@ class BalanceDialog(models.Model):
 
     def press_history(self, text: str):
         histroy, _ = SearchHistory.objects.get_or_create(user=self.user)
+        histroy.delete_yestoday()
         message_list = [('Последние запросы:', None)]
         data = histroy.data
         data.reverse()
@@ -317,8 +332,9 @@ class BalanceDialog(models.Model):
         if 'history' not in data:
             return self.default_resolver(data)
         history_id = int(data.split('_')[1])
-        history = SearchHistory.objects.get(user=self.user)
-        data = history.data[history_id]
+        history = SearchHistory.objects.get(user=self.user).data
+        history.reverse()
+        data = history[history_id]
         self.data = data
         self.save()
         results = self.data['search_results']
@@ -352,7 +368,7 @@ class BalanceDialog(models.Model):
             keyboard.add(url)
             keyboard.add(button)
             self.set_resolver('press_cancel_payment')
-            return f'У вас уже есть неплаченный счет:\n {bill.amount / 100} {settings.DEFAULT_CURENCY}', keyboard
+            return f'У вас уже есть неоплаченный счет:\n {bill.amount / 100} {settings.DEFAULT_CURENCY}', keyboard
 
         if self.user.email == '':
             self.set_resolver('input_email')
@@ -631,7 +647,7 @@ class BalanceDialog(models.Model):
             self.data = {'addr_variants': addr_variants[0]}
             self.set_resolver('press_next_on_adsress')
             keyboard = types.InlineKeyboardMarkup()
-            button = types.InlineKeyboardButton(text=f'Далее ({self.user.searches_remain})', callback_data='next')
+            button = types.InlineKeyboardButton(text=f'Далее', callback_data='next')
             keyboard.row(button)
             text = f'''Адрес распознан как:
 <b>{self.data['addr_variants']['value']}</b>
@@ -736,8 +752,8 @@ class BalanceDialog(models.Model):
 Адресс: {self.data["choosen_variant"]["Адрес"]}
 Кадастровый номер: {self.data["choosen_variant"]["Кадастровый номер"]}
 Услуга: {service.name}
-Стоимость: {service.get_price()}
-На счете останется: {purse.ammount - service.get_price()}''', keyboard
+Стоимость: {service.get_price()}''', keyboard
+# На счете останется: {purse.ammount - service.get_price()}''', keyboard
         else:
             self.data['return_to'] = 'press_on_service'
             self.data['return_data'] = data
