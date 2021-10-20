@@ -469,7 +469,7 @@ class BalanceDialog(models.Model):
 📧 <b>Email</b>: {self.user.email}
 ☎️ <b>Телефон</b>: {self.user.phone_number}
 💰 <b>Баланс</b>: {self.user.purse_set.get(curency__name=settings.DEFAULT_CURENCY).ammount} {settings.DEFAULT_CURENCY}
-🔎 Количество доступных поисков сегодня: {self.user.searches_remain}
+🔎 <b>Количество доступных поисков сегодня</b>: {self.user.searches_remain}
 '''
         # Вы с нами с: {self.user.date_joined.strftime('%d.%m.%Y')}
 
