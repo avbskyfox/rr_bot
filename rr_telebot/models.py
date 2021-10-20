@@ -1,8 +1,8 @@
 import re
 from asyncio.exceptions import TimeoutError
 
-from aiogram import types, Bot
-from asgiref.sync import sync_to_async, async_to_sync
+from aiogram import types
+from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -11,63 +11,14 @@ from loguru import logger
 from cabinet.models import User, Service, Curency, Bill, Order, OrderException, BackendException, Excerpt
 from rr_backend.backend import Backend
 from rr_backend.rosreestr import TemporaryUnavalible, NotFound
-from .tasks import update_bill_status, send_to_adm_group
-
-bot = Bot(token=settings.TELEGRAM_API_TOKEN)
-
-
-@async_to_sync
-async def send_message(*args, **kwargs):
-    return await bot.send_message(*args, parse_mode='HTML', **kwargs)
-
-
-class Dialog(models.Model):
-    class Meta:
-        verbose_name = 'Диалог'
-
-    telegram_id = models.OneToOneField(User, to_field='telegram_id',
-                                       on_delete=models.CASCADE,
-                                       verbose_name='Пользователь',
-                                       db_index=True,
-                                       primary_key=True)
-    step = models.IntegerField(verbose_name='Шаг', default=0)
-    data = models.JSONField(verbose_name='Данные', default=dict)
-    service = models.ForeignKey(Service, on_delete=models.CASCADE, verbose_name='Услуга', null=True)
-    curency = models.ForeignKey(Curency, on_delete=models.CASCADE, verbose_name='Валюта', null=True)
-    number = models.CharField(max_length=30, verbose_name='Кадастровый номер', blank=True)
-    address = models.CharField(max_length=255, verbose_name='Строка адреса', blank=True)
-    dadata = models.JSONField(max_length=4096, verbose_name='Данные дадата', null=True)
-
-    def serialize(self):
-        purse = self.telegram_id.purse_set.get(curency=self.curency)
-        return {
-            'step': self.step,
-            'service': self.service.serialize(),
-            'curency': self.curency,
-            'number': self.number,
-            'address': self.address,
-            'purse_ammount': purse.ammount,
-            'check_ammount': self.service.check_ammount(self.telegram_id, self.curency)
-        }
-
-    def flush(self):
-        self.step = 0
-        self.data = {}
-        self.save()
-
-
-# def conditions_accepted_permission(cls):
-#    for name, method in cls.__dict__.iteritems():
-#         if hasattr(method, "use_class"):
-#             # do something with the method and class
-#
-#    return cls
+from .tasks import update_bill_status, send_to_adm_group, notify_user
 
 
 def conditions_accepted_permission(method):
     def wraper(*args, **kwargs):
         def is_done_char(expression: bool):
             return '✅' if expression else '❌'
+
         user = args[0].user
         is_condition = user.conditions_accepted
         is_email = True if user.email != '' else False
@@ -88,7 +39,49 @@ def conditions_accepted_permission(method):
             return text, keyboard
         else:
             return method(*args, **kwargs)
+
     return wraper
+
+
+class Ticket(models.Model):
+    class Meta:
+        verbose_name = 'Тикет'
+        verbose_name_plural = 'Тикеты'
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name='Пользователь')
+    description = models.TextField(max_length=8192, blank=True, verbose_name='Описание')
+    solution = models.TextField(max_length=8192, blank=True, verbose_name='Решение')
+    closed = models.BooleanField(default=False, verbose_name='Закрыт?')
+    user_notify_message = models.TextField(max_length=8192, blank=True, verbose_name='Сообщение пользователю')
+    need_notify_user = models.BooleanField(default=False, verbose_name='Уведомить пользователя?')
+
+    def notify(self):
+        notify_user.delay(self.user.telegram_id, self.user_notify_message)
+
+    def save(self, *args, **kwargs):
+        if self.closed:
+            send_to_adm_group(f'Тикет {self.id} закрыт: {self.description}')
+        if self.need_notify_user:
+            self.notify()
+        super(Ticket, self).save(*args, **kwargs)
+        if not self.closed:
+            send_to_adm_group(f'Тикет {self.id} создан: {self.description}')
+
+    def __str__(self):
+        return str(self.id)
+
+
+class Review(models.Model):
+    class Meta:
+        verbose_name = 'Отзыв'
+        verbose_name_plural = 'Отзывы'
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name='Пользователь')
+    text = models.TextField(max_length=8192, blank=True, verbose_name='Описание')
+    grade = models.IntegerField(null=True)
+
+    def __str__(self):
+        return f'{str(self.id)} - {self.user.username}'
 
 
 class SearchHistory(models.Model):
@@ -100,7 +93,7 @@ class SearchHistory(models.Model):
                                 verbose_name='Пользователь',
                                 db_index=True,
                                 primary_key=True)
-    data = models.JSONField(default=list, max_length=8096, verbose_name='Данные')
+    data = models.JSONField(default=list, max_length=8192, verbose_name='Данные')
 
     def save_to_history(self, dadata):
         self.data.insert(0, dadata)
@@ -125,9 +118,6 @@ class BalanceDialog(models.Model):
         return f'{self.user.username}_dialog'
 
     chat_id = None
-
-    def send_message(self, text, reply_markup=None):
-        send_message(chat_id=self.chat_id, text=text, reply_markup=reply_markup)
 
     def flush(self):
         # main_dialog, _ = Dialog.objects.get_or_create(pk=self.user)
@@ -169,6 +159,8 @@ class BalanceDialog(models.Model):
         if data == 'accept_conditions':
             # obj.flush()
             return obj.press_accept_conditions(data)
+        if data == 'feedback':
+            return obj.press_feedback(data)
 
         resolver = obj.get_resolver()
         return resolver(data)
@@ -197,6 +189,9 @@ class BalanceDialog(models.Model):
         if text == '📝 История':
             obj.flush()
             return obj.press_history(text)
+
+        resolver = obj.get_resolver()
+
         if re.match(r'.* .* .*', text):
             obj.flush()
             return obj.input_adress_string(text)
@@ -205,7 +200,6 @@ class BalanceDialog(models.Model):
             obj.flush()
             return obj.input_cadastr_number(text)
 
-        resolver = obj.get_resolver()
         return resolver(text)
 
     @classmethod
@@ -234,7 +228,8 @@ class BalanceDialog(models.Model):
         return getattr(self, str(self.resolver), self.default_resolver)
 
     def default_resolver(self, data):
-        return f'Упс...\nВы нажали куда-то не туда :)\nИли сказали что-то непонятное :)\nПожалуйста, начните диалог заново.', None
+        return f'Упс...\nВы нажали куда-то не туда :)\nИли сказали что-то непонятное :)\n' \
+               f'Пожалуйста, начните диалог заново.', None
 
     def press_join(self, data):
         if data == 'join':
@@ -447,6 +442,7 @@ class BalanceDialog(models.Model):
         # referal = types.InlineKeyboardButton(text='Рефералка', callback_data='referal')
         change_email = types.InlineKeyboardButton(text='📧 Изменить email', callback_data='change_email')
         change_phone = types.InlineKeyboardButton(text='☎️ Изменить телефон', callback_data='change_phone')
+        change_phone = types.InlineKeyboardButton(text='📣 Обратная связь', callback_data='feedback')
         keyboard.add(top_up_balance)
         keyboard.add(orders)
         # keyboard.add(referal)
@@ -542,7 +538,8 @@ class BalanceDialog(models.Model):
         keyboard = types.InlineKeyboardMarkup()
         new_button = types.InlineKeyboardButton(text=f'В обработке ({len(processed_orders)})',
                                                 callback_data='new_orders')
-        old_button = types.InlineKeyboardButton(text=f'Исполненные ({len(finished_orders)})', callback_data='old_orders')
+        old_button = types.InlineKeyboardButton(text=f'Исполненные ({len(finished_orders)})',
+                                                callback_data='old_orders')
         keyboard.add(new_button)
         keyboard.add(old_button)
         return 'Выбирете:', keyboard
@@ -577,7 +574,8 @@ class BalanceDialog(models.Model):
                 if exerpt.is_delivered:
                     status = 'отправлена на почту'
                     keyboard = types.InlineKeyboardMarkup()
-                    button = types.InlineKeyboardButton(text='Получить на почту 📬', callback_data=f'resend_{exerpt.id}')
+                    button = types.InlineKeyboardButton(text='Получить на почту 📬',
+                                                        callback_data=f'resend_{exerpt.id}')
                     keyboard.add(button)
                     message_list.append((f'{exerpt.type.name}: {status}\n', keyboard))
                 else:
@@ -595,6 +593,35 @@ class BalanceDialog(models.Model):
                 excerpt.send_docs()
         self.flush()
         return 'Отправил', None
+
+    def press_feedback(self, data: str):
+        keyboard1 = types.InlineKeyboardMarkup()
+        button1 = types.InlineKeyboardButton(text='🙋 оставить отзыв', callback_data='review')
+        keyboard1.add(button1)
+        # keyboard2 = types.InlineKeyboardMarkup(row_width=6)
+        button2 = types.InlineKeyboardButton(text='🆘 сообщить о проблеме', callback_data='report_probem')
+        keyboard1.add(button2)
+        self.set_resolver('make_feedback')
+        return 'Здесь вы можете', keyboard1
+
+    def make_feedback(self, data: str):
+        if data == 'review':
+            self.set_resolver('input_review')
+            return 'Напишите, что Вы думаете о нас'
+        if data == 'report_probem':
+            self.set_resolver('input_problem')
+            return 'Напишите о проблеме, мы немедленно займемся ее устранением. Обратите внимание, что все ' \
+                   '<b>ошибки при поиске объектов регистрируются автоматически</b>, сообщать о них не надо', None
+
+    def input_review(self, text: str):
+        Review.objects.create(user=self.user, text=text)
+        self.flush()
+        return 'Спасибо за Ваш отзыв', None
+
+    def input_problem(self, text: str):
+        Ticket.objects.create(user=self.user, description=text)
+        self.flush()
+        return 'Ваше обращение зарегистрировано. Мы вскоре разберемся и сообщим Вам.', None
 
     def input_adress_string(self, data: str):
         addr_variants = Backend.find_adress(data, self.chat_id)
@@ -627,16 +654,20 @@ class BalanceDialog(models.Model):
             try:
                 results = Backend.objects_by_address(self.data['addr_variants'], self.chat_id)
             except (TimeoutError, TemporaryUnavalible):
-                send_to_adm_group.delay(f'Недоступны сервисы при поиске: {self.data["addr_variants"]["value"]}')
+                Ticket.objects.create(user=self.user,
+                                      description=f'Недоступны сервисы при поиске: '
+                                                  f'{self.data["addr_variants"]["value"]}')
                 logger.debug(f'timeout_error or temporary_unavalible, addr: {self.data["addr_variants"]["value"]}')
                 return 'Cервисы Росреестра в настоящий момент недоступны, попробуйте позже...', None
             except:
-                send_to_adm_group.delay(f'Исключение при поиске: {self.data["addr_variants"]["value"]}')
+                Ticket.objects.create(user=self.user,
+                                      description=f'Исключение при поиске: {self.data["addr_variants"]["value"]}')
                 logger.exception(f'Exeption on search address: {self.data["addr_variants"]["value"]}')
                 return 'Низвестная ошибка!!! Мы уже разбираемся с этим. Попробуйте повторить запрос', None
 
             if len(results) == 0:
-                send_to_adm_group.delay(f'Адрес не найден: {self.data["addr_variants"]["value"]}')
+                Ticket.objects.create(user=self.user,
+                                      description=f'Адрес не найден: {self.data["addr_variants"]["value"]}')
                 return 'К сожалению не удалось найти информацию об объекте', None
 
             self.data['search_results'] = results
@@ -676,8 +707,9 @@ class BalanceDialog(models.Model):
         price_list = Service.price_list()
         keyboard = types.InlineKeyboardMarkup()
         for price in price_list:
-            button = types.InlineKeyboardButton(text=f'{price["short_name"]} за {price["price"]} {settings.DEFAULT_CURENCY}',
-                                                callback_data=f'service_{price["id"]}')
+            button = types.InlineKeyboardButton(
+                text=f'{price["short_name"]} за {price["price"]} {settings.DEFAULT_CURENCY}',
+                callback_data=f'service_{price["id"]}')
             keyboard.add(button)
         return text, keyboard
 
