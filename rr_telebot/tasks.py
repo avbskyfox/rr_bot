@@ -9,7 +9,7 @@ admin_bot = TeleBot(settings.NOTIFIER_BOT_TOKEN)
 group_id = settings.ADMIN_GROUP_ID
 
 
-@shared_task(default_retry_delay=10, max_retries=12)
+@shared_task(default_retry_delay=10, max_retries=24)
 def update_bill_status(bill_id, chat_id):
     bill = Bill.objects.get(pk=bill_id)
     bill.update_payment()

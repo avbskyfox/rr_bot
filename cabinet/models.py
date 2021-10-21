@@ -327,9 +327,10 @@ class Bill(models.Model):
         params = {
             "Amount": str(self.price),
             "OrderId": str(self.number),
-            "Description": f"Покупка внутренней валюты в колиестве: {self.amount}",
+            "Description": f"Покупка внутренней валюты в колиестве: {self.amount/100}",
             "Receipt": {
                 "Email": self.user.email,
+                "Phone": f'+{self.user.phone_number}',
                 "Taxation": "osn",
                 "Items": [
                     {
