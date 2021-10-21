@@ -458,12 +458,13 @@ class BalanceDialog(models.Model):
         # referal = types.InlineKeyboardButton(text='Рефералка', callback_data='referal')
         change_email = types.InlineKeyboardButton(text='📧 Изменить email', callback_data='change_email')
         change_phone = types.InlineKeyboardButton(text='☎️ Изменить телефон', callback_data='change_phone')
-        change_phone = types.InlineKeyboardButton(text='📣 Обратная связь', callback_data='feedback')
+        feedback = types.InlineKeyboardButton(text='📣 Обратная связь', callback_data='feedback')
         keyboard.add(top_up_balance)
         keyboard.add(orders)
         # keyboard.add(referal)
         keyboard.add(change_email)
         keyboard.add(change_phone)
+        keyboard.add(feedback)
         # curency = Curency.objects.get(name__exact=settings.DEFAULT_CURENCY)
         text = f'''⭐️ <b>Ваш ID</b>: {self.user.telegram_id}
 📧 <b>Email</b>: {self.user.email}
@@ -613,10 +614,10 @@ class BalanceDialog(models.Model):
 
     def press_feedback(self, data: str):
         keyboard1 = types.InlineKeyboardMarkup()
-        button1 = types.InlineKeyboardButton(text='🙋 оставить отзыв', callback_data='review')
+        button1 = types.InlineKeyboardButton(text='🙋 Оставить отзыв', callback_data='review')
         keyboard1.add(button1)
         # keyboard2 = types.InlineKeyboardMarkup(row_width=6)
-        button2 = types.InlineKeyboardButton(text='🆘 сообщить о проблеме', callback_data='report_probem')
+        button2 = types.InlineKeyboardButton(text='🆘 Сообщить о проблеме', callback_data='report_probem')
         keyboard1.add(button2)
         self.set_resolver('make_feedback')
         return 'Здесь вы можете', keyboard1
@@ -638,7 +639,8 @@ class BalanceDialog(models.Model):
     def input_problem(self, text: str):
         Ticket.objects.create(user=self.user, description=text)
         self.flush()
-        return 'Ваше обращение зарегистрировано. Мы вскоре разберемся и сообщим Вам.', None
+        return 'Ваше обращение зарегистрировано. Мы вскоре разберемся с проблемой и уведомим ' \
+               'Вас об этом через бота.', None
 
     def input_adress_string(self, data: str):
         addr_variants = Backend.find_adress(data, self.chat_id)
