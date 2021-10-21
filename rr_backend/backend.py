@@ -67,7 +67,7 @@ class Backend:
             return (asd[0]['value']) == dadata['value']
 
         try:
-            send_progress_message.delay(chat_id, 'опрашиваем Росреестра...')
+            send_progress_message.delay(chat_id, '⏳ опрашиваем Росреестр...')
             objects = await RosreestrClient.find_objects(dadata)
             filtred_objects = []
             for item in objects:
@@ -87,7 +87,7 @@ class Backend:
             if len(result) == 0:
                 raise NotFound('не найдена инфомрация ни по одному объекту')
         except NotFound:
-            send_progress_message.delay(chat_id, 'ищем информацию...')
+            send_progress_message.delay(chat_id, '⏳ ищем информацию...')
             objects = await ApiEgrnClient.search(dadata['value'])
             # objects = await find_object(dadata)
             result = []
@@ -103,7 +103,7 @@ class Backend:
     @staticmethod
     @async_cashed_call
     async def async_object_by_number(number: str, chat_id):
-        send_progress_message.delay(chat_id, 'ищем подробную информацию об объекте...')
+        send_progress_message.delay(chat_id, '⏳ ищем подробную информацию об объекте...')
         found = False
         for i in range(0, 3):
             try:
