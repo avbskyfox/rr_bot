@@ -24,9 +24,12 @@ class TinkoffWebhookView(View):
         logger.debug(token)
         logger.debug(my_token)
         if token == my_token:
-            bill = Bill.objects.get(number=data['OrderId'])
-            bill.update_payment()
-            return HttpResponse('OK')
+            try:
+                bill = Bill.objects.get(number=data['OrderId'])
+                bill.update_payment()
+                return HttpResponse('OK')
+            except Bill.DoesNotExist:
+                return HttpResponse('NOT FOUND', status=404)
         else:
             logger.warning(f'BAD TOKEN: {request}')
             return HttpResponse('BAD TOKEN', status=403)
