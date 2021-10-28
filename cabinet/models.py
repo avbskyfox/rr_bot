@@ -11,7 +11,6 @@ from django.utils import timezone
 from loguru import logger
 from redis import Redis
 from redis.lock import Lock
-from rr_telebot.tasks import notify_user
 
 from notifiers.smtp import send_mail
 from rr_backend.backend import Backend
@@ -361,6 +360,7 @@ class Bill(models.Model):
                     purse.ammount += self.amount / 100
                     purse.save()
                     logger.debug(f'оплачен счет {self.number} ползователем {self.user.username} на сумму {self.amount / 100}')
+                    from rr_telebot.tasks import notify_user
                     notify_user.delay(f'На ваш сет начисленно {int(self.amount / 100)} руб')
                     try:
                         from rr_telebot.tasks import send_to_adm_group
