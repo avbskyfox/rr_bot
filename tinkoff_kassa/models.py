@@ -16,6 +16,7 @@ class PaymentModel(models.Model):
     payment_url = models.URLField(verbose_name='Ссылка на платежную форму', blank=True)
     is_confirmed = models.BooleanField(default=False)
     is_canceled = models.BooleanField(default=False)
+    params = models.JSONField(verbose_name='Параметры платежа')
 
     def __str__(self):
         return self.order_id
@@ -37,6 +38,7 @@ class PaymentModel(models.Model):
             status=data.get('Status', ''),
             payment_id=data.get('PaymentId', 0),
             payment_url=data.get('PaymentURL', ''),
+            params=params
         )
         payment.save()
         return payment

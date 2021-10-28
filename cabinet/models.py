@@ -11,6 +11,7 @@ from django.utils import timezone
 from loguru import logger
 from redis import Redis
 from redis.lock import Lock
+from django.urls import reverse
 
 from notifiers.smtp import send_mail
 from rr_backend.backend import Backend
@@ -307,7 +308,7 @@ class Bill(models.Model):
         verbose_name = 'Счет'
         verbose_name_plural = 'Счета'
 
-    number = models.CharField(max_length=20, default=bill_number_generator)
+    number = models.CharField(max_length=20, default=bill_number_generator, db_index=True)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, db_index=True, verbose_name='Пользователь', null=True)
     curency = models.ForeignKey(Curency, on_delete=models.SET_NULL, verbose_name='Внутренняя валюта', null=True)
     amount = models.IntegerField(verbose_name='Кол-во внутренней валюты')
@@ -317,7 +318,7 @@ class Bill(models.Model):
     is_payed = models.BooleanField(default=False)
 
     def __str__(self):
-        return f'{self.user} - {self.amount} {self.curency}'
+        return f'{self.user} - {self.amount/100} {self.curency}'
 
     # @property
     # def number(self):
@@ -328,6 +329,7 @@ class Bill(models.Model):
             "Amount": str(self.price),
             "OrderId": str(self.number),
             "Description": f"Покупка внутренней валюты в колиестве: {self.amount/100}",
+            "NotificationURL": reverse('tinkoff_notification'),
             "Receipt": {
                 "Email": self.user.email,
                 "Phone": f'+{self.user.phone_number}',

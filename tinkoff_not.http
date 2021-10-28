@@ -1,0 +1,19 @@
+POST http://127.0.0.1:8000/tinkoff_notification
+Content-Type: application/json
+
+{
+  "TerminalKey":"1510572937960",
+  "OrderId":"5cec",
+  "Success":true,
+  "Status":"CONFIRMED",
+  "PaymentId":2006896,
+  "ErrorCode":"0",
+  "Amount":10000,
+  "CardId":867911,
+  "Pan":"430000**0777",
+  "ExpDate":"1122",
+  "Token":"a25a7034a8026e5b5a9866e8fa97a0e79fb4e404245d613a5114cb07bfef8dc7"
+}
+
+###
+

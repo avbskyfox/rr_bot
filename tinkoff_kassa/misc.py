@@ -13,7 +13,7 @@ def generate_token(request: dict):
     for key in keys:
         if key in unwanted_keys:
             continue
-        values_str += copy[key]
+        values_str += str(copy[key])
     return sha256(values_str.encode()).hexdigest()
 
 
