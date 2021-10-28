@@ -169,7 +169,7 @@ def order_number_generator():
         with open('last_order', 'r') as f:
             last = int(f.read())
         number = last + random.randint(1, 9)
-        with open('last_int', 'w') as f:
+        with open('last_order', 'w') as f:
             f.write(str(number))
         return hex(number).split('x')[1]
 
@@ -329,7 +329,7 @@ class Bill(models.Model):
             "Amount": str(self.price),
             "OrderId": str(self.number),
             "Description": f"Покупка внутренней валюты в колиестве: {self.amount/100}",
-            # "NotificationURL": reverse('tinkoff_notification'),
+            "NotificationURL": reverse('tinkoff_notification'),
             "Receipt": {
                 "Email": self.user.email,
                 "Phone": f'+{self.user.phone_number}',

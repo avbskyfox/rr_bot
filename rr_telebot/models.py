@@ -419,7 +419,7 @@ class BalanceDialog(models.Model):
                                        amount=amount,
                                        price=amount * curency.course)
             bill.create_payment()
-            update_bill_status.delay(bill.id, self.user.telegram_id)
+            # update_bill_status.delay(bill.id, self.user.telegram_id)
             keyboard = types.InlineKeyboardMarkup()
             button = types.InlineKeyboardButton(text='Оплатить через Tinkoff', url=bill.payment.payment_url)
             keyboard.add(button)
