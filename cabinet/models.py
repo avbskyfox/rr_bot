@@ -361,7 +361,7 @@ class Bill(models.Model):
                     purse.save()
                     logger.debug(f'оплачен счет {self.number} ползователем {self.user.username} на сумму {self.amount / 100}')
                     from rr_telebot.tasks import notify_user
-                    notify_user.delay(f'На ваш сет начисленно {int(self.amount / 100)} руб')
+                    notify_user.delay(self.user.telegram_id, f'На ваш сет начисленно {int(self.amount / 100)} руб')
                     try:
                         from rr_telebot.tasks import send_to_adm_group
                         send_to_adm_group.delay(f'{self.user.username} пополнил счет {self.number} на {self.amount / 100}')
