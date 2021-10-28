@@ -329,7 +329,7 @@ class Bill(models.Model):
             "Amount": str(self.price),
             "OrderId": str(self.number),
             "Description": f"Покупка внутренней валюты в колиестве: {self.amount/100}",
-            "NotificationURL": reverse('tinkoff_notification'),
+            "NotificationURL": 'http://terragent.ru/tinkoff_notification',
             "Receipt": {
                 "Email": self.user.email,
                 "Phone": f'+{self.user.phone_number}',
