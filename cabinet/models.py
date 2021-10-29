@@ -341,7 +341,7 @@ class Bill(models.Model):
                         "Amount": self.price,
                         "PaymentMethod": "full_prepayment",
                         "PaymentObject": "service",
-                        "Tax": None
+                        "Tax": 'none'
                     }
                 ]
             }
