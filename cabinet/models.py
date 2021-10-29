@@ -353,7 +353,7 @@ class Bill(models.Model):
         with Lock(redis, name=f'bill_{self.id}', timeout=10):
             if self.payment is not None:
                 self.payment.get_state()
-                if self.payment.is_confirmed:
+                if not self.is_payed and self.payment.is_confirmed:
                     self.is_payed = True
                     self.save()
                     purse = self.user.purse_set.get(curency=self.curency)
