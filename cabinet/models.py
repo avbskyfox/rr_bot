@@ -332,7 +332,7 @@ class Bill(models.Model):
             "Receipt": {
                 "Email": self.user.email,
                 "Phone": f'+{self.user.phone_number}',
-                "Taxation": "osn",
+                "Taxation": "usn_income",
                 "Items": [
                     {
                         "Name": "1",
@@ -341,7 +341,7 @@ class Bill(models.Model):
                         "Amount": self.price,
                         "PaymentMethod": "full_prepayment",
                         "PaymentObject": "service",
-                        "Tax": "vat10"
+                        "Tax": None
                     }
                 ]
             }
