@@ -1,6 +1,6 @@
 import json
 
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 from django.views import View
 from loguru import logger
 
@@ -33,39 +33,3 @@ class TinkoffWebhookView(View):
         else:
             logger.warning(f'BAD TOKEN: {request}')
             return HttpResponse('BAD TOKEN', status=403)
-
-
-class ApiView(View):
-    def get(self, request, *args, **kwargs):
-        logger.debug(request.headers)
-        # logger.debug(request.params)
-        logger.debug(request.body)
-        data = {
-            'data': {
-                'type': 'account',
-                'id': 1,
-                'attributes': {
-                    'username': 'hui',
-                    'telegram-id': 'asda',
-                    'email': 'asdasd@asd.er',
-                }
-            }
-        }
-        response = JsonResponse(data)
-        response["Access-Control-Allow-Origin"] = "*"
-        response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-        response["Access-Control-Max-Age"] = "1000"
-        response["Access-Control-Allow-Headers"] = "X-Requested-With, Content-Type"
-        logger.debug(response.content)
-        return response
-
-    # def post(self, request, *args, **kwargs):
-    #     logger.debug(request.headers)
-    #     logger.debug(request.params)
-    #     logger.debug(request.body)
-    #     response = JsonResponse({'data': {'username': 'hui', 'id': 1, 'telegram_id': 'asda', 'email': 'asdasd@asd.er'}})
-    #     response["Access-Control-Allow-Origin"] = "*"
-    #     response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-    #     response["Access-Control-Max-Age"] = "1000"
-    #     response["Access-Control-Allow-Headers"] = "X-Requested-With, Content-Type"
-    #     return response

@@ -1,5 +1,4 @@
 import importlib
-import time
 import random
 
 from asgiref.sync import sync_to_async
@@ -317,7 +316,7 @@ class Bill(models.Model):
     is_payed = models.BooleanField(default=False)
 
     def __str__(self):
-        return f'{self.user} - {self.amount/100} {self.curency}'
+        return f'{self.user} - {self.amount / 100} {self.curency}'
 
     # @property
     # def number(self):
@@ -327,7 +326,7 @@ class Bill(models.Model):
         params = {
             "Amount": str(self.price),
             "OrderId": str(self.number),
-            "Description": f"Покупка внутренней валюты в колиестве: {self.amount/100}",
+            "Description": f"Покупка внутренней валюты в колиестве: {self.amount / 100}",
             "NotificationURL": 'http://terragent.ru/tinkoff_notification',
             "Receipt": {
                 "Email": self.user.email,
@@ -359,12 +358,14 @@ class Bill(models.Model):
                     purse = self.user.purse_set.get(curency=self.curency)
                     purse.ammount += self.amount / 100
                     purse.save()
-                    logger.debug(f'оплачен счет {self.number} ползователем {self.user.username} на сумму {self.amount / 100}')
+                    logger.debug(
+                        f'оплачен счет {self.number} ползователем {self.user.username} на сумму {self.amount / 100}')
                     from rr_telebot.tasks import notify_user
                     notify_user.delay(self.user.telegram_id, f'На ваш сет начисленно {int(self.amount / 100)} руб')
                     try:
                         from rr_telebot.tasks import send_to_adm_group
-                        send_to_adm_group.delay(f'{self.user.username} пополнил счет {self.number} на {self.amount / 100}')
+                        send_to_adm_group.delay(
+                            f'{self.user.username} пополнил счет {self.number} на {self.amount / 100}')
                     finally:
                         pass
                 if self.payment.is_canceled:

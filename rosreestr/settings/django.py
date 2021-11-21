@@ -53,7 +53,6 @@ INSTALLED_APPS = [
     'cabinet.apps.CabinetConfig',
     'rr_telebot.apps.RrTelebotConfig',
     'tinkoff_kassa.apps.TinkoffKassaConfig',
-    'graphene_django',
 ]
 
 MIDDLEWARE = [
