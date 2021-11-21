@@ -17,7 +17,7 @@ from django.contrib import admin
 from django.urls import path
 from cabinet.views import TinkoffWebhookView, ApiView
 from django.views.decorators.csrf import csrf_exempt
-from graphene_django.views import GraphQLView
+# from graphene_django.views import GraphQLView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
