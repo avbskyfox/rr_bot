@@ -17,9 +17,11 @@ from django.contrib import admin
 from django.urls import path
 from cabinet.views import TinkoffWebhookView, ApiView
 from django.views.decorators.csrf import csrf_exempt
+from graphene_django.views import GraphQLView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('tinkoff_notification', csrf_exempt(TinkoffWebhookView.as_view()), name='tinkoff_notification'),
-    path('api/accounts', csrf_exempt(ApiView.as_view()), name='api_account'),
+    # path('api/accounts', csrf_exempt(ApiView.as_view()), name='api_account'),
+    # path("graphql", csrf_exempt(GraphQLView.as_view(graphiql=True))),
 ]

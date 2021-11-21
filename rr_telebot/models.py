@@ -23,13 +23,19 @@ def conditions_accepted_permission(method):
         is_condition = user.conditions_accepted
         is_email = True if user.email != '' else False
         is_phone = True if user.phone_number != '' else False
+        if not is_email:
+            t_button = 'Указать email'
+        elif not is_phone:
+            t_button = 'Указать номер телефона'
+        elif not is_condition:
+            t_button = '👉Правила работы сервиса'
         try:
             assert is_condition
             assert is_email
             assert is_phone
         except AssertionError:
             keyboard = types.InlineKeyboardMarkup()
-            button = types.InlineKeyboardButton(text='Продолжить', callback_data='authorization')
+            button = types.InlineKeyboardButton(text=t_button, callback_data='authorization')
             keyboard.add(button)
             text = f'''Для того, что бы пользоваться сервисом необходимо авторизоваться. Для этого пройдите три простых шага:
 {is_done_char(is_email)} Введите адресс электронной почты
@@ -279,7 +285,7 @@ class BalanceDialog(models.Model):
         if not is_phone:
             self.data['return_to_authorization'] = True
             self.data['return_data'] = data
-            self.set_resolver('input_email')
+            self.save()
             return self.press_change_phone('data')
         if not is_condition:
             keyboard = types.InlineKeyboardMarkup()
@@ -519,7 +525,7 @@ class BalanceDialog(models.Model):
         button2 = types.KeyboardButton(text='❌ Отмена')
         keyboard.add(button1)
         keyboard.add(button2)
-        return 'Поделитесь с нами Вашим номером телефона:', keyboard
+        return 'Нажмите на кнопку "✅Поделиться" чтобы сообщить нам Ваш номер телефона', keyboard
 
     def input_phone(self, message: types.Message):
         keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -538,7 +544,9 @@ class BalanceDialog(models.Model):
         self.user.phone_number = message.contact.phone_number
         self.user.save()
         if self.data.get('return_to_authorization', None):
-            return [('Спасибо', keyboard), self.press_authorization(self.data['return_data'])]
+            returned_obj = [('Спасибо', keyboard)]
+            returned_obj.extend(self.press_authorization(self.data['return_data']))
+            return returned_obj
         return 'Спасибо', keyboard
 
     def press_orders(self, data: str):
@@ -732,6 +740,7 @@ class BalanceDialog(models.Model):
             keyboard.add(button)
         return text, keyboard
 
+    @conditions_accepted_permission
     def press_on_service(self, data: str):
         if 'service' not in data:
             return self.default_resolver(data)

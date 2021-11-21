@@ -234,10 +234,11 @@ async def message_handler(message: types.Message):
 async def contact_handler(message):
     logger.debug(message)
     result = await database_handler.BalanceDialog.async_contact_resolv(message)
-    logger.debug(result)
+    # logger.debug(result)
     if not isinstance(result, list):
         result = [result]
     for item in result:
+        logger.debug(item)
         text, markup = item
         if markup is not None:
             if isinstance(markup, types.InputFile):
