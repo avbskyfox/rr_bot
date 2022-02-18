@@ -12,7 +12,7 @@ before_script:
   - python3 -m venv venv
   - source venv/bin/activate
   - pip3 install -r requirements.txt
-
+      
 create_env-job:
     stage: build
     environment:
@@ -41,17 +41,6 @@ create_env-job:
       expire_in: 30 days
       paths:
         - .env
-      
-
-build-job:
-  environment:
-    name: development
-  stage: build
-  script:
-    - echo $DEBUG
-    - echo "$DEBUG" > .env
-    - test -f .env
-
 
 test-job:
   environment:
