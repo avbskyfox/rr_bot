@@ -1,5 +1,12 @@
 stages:
+    - test
     - deploy
+
+test-job:
+    stage: test
+    script:
+        - echo "Tested"
+
 deploy-job:
     stage: deploy
     script:
