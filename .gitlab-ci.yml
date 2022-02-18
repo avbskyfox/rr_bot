@@ -1,7 +1,5 @@
-variables:
-  DEBUG: $DEBUG
-
 build-job:
+  environment: develop
   stage: build
   script:
     - python3 -m venv venv
