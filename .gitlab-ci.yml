@@ -20,3 +20,7 @@ test-job:
   stage: test
   script:
       - test -f .env
+  cache:
+    paths: 
+      - venv/
+      - .env
