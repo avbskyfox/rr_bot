@@ -18,11 +18,11 @@ create_env-job:
     environment:
       name: development
     script:
-      - echo $DEBUG > .env
-      - echo $SECRET_KEY >> .env
-      - echo $ALLOWED_HOSTS >> .env
-      - echo $DATABASE_URL >> .env
-      - echo $CELERY_REDIS_URL >> .env
+      - echo "DEBUG=$DEBUG" > .env
+      - echo "SECRET_KEY=$SECRET_KEY" >> .env
+      - echo "ALLOWED_HOSTS=$ALLOWED_HOSTS" >> .env
+      - echo "DATABASE_URL=$DATABASE_URL" >> .env
+      - echo "CELERY_REDIS_URL=$CELERY_REDIS_URL" >> .env
       - echo $ROSREESTR_POLICY_FILE >> .env
       - echo $ROSREESTR_OFFERTA_FILE >> .env
       - echo $TELEGRAM_API_TOKEN >> .env
