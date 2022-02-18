@@ -5,8 +5,4 @@ build-job:
     - source venv/bin/activate
     - pip3 install -r requirements.txt
     - echo "$DEBUG" > .env
-
-test-build:
-  stage: test
-  script:
     - test -f .env
