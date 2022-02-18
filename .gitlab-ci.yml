@@ -9,3 +9,14 @@ build-job:
     - echo $DEBUG
     - echo "$DEBUG" > .env
     - test -f .env
+  cache:
+    paths: 
+      - venv/
+      - .env
+
+test-job:
+  environment:
+    name: develop
+  stage: test
+  script:
+      - test -f .env
