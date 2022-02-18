@@ -1,5 +1,6 @@
 build-job:
-  environment: develop
+  environment:
+    name: develop
   stage: build
   script:
     - python3 -m venv venv
