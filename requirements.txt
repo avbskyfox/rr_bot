@@ -8,11 +8,5 @@ celery
 redis
 daphne
 requests
-python-telegram-bot
-pyTelegramBotAPI
 psycopg2-binary
 django-environ
-bs4
-lxml
-selenium
-graphene-django
