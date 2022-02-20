@@ -54,10 +54,7 @@ deploy-job:
     name: staging
   stage: deploy
   script:
-    - rsync -avz -e 'ssh -p 34135' ./ web@193.164.150.71:/home/web/app/
+    - rsync -avz --exclude 'venv' -e 'ssh -p 34135' ./ web@193.164.150.71:/home/web/app/
     - ssh -p 34135 web@193.164.150.71 'cd /home/web/app; source prepear_venv.sh'
   before_script:
     - echo "Start deploy to staging..."
-  cache:
-    paths:
-      - .env
