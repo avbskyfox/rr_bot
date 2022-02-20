@@ -1,8 +1,6 @@
 #!/usr/bin/env sh
 
-sudo su
+yes | sudo cp -f etc/supervisor/conf.d/asgi.conf /etc/supervisor/conf.d/asgi.conf
+yes | sudo p -f etc/supervisor/conf.d/rrtelebot.conf /etc/supervisor/conf.d/rrtelebot.conf
 
-yes | cp -f etc/supervisor/conf.d/asgi.conf /etc/supervisor/conf.d/asgi.conf
-yes | cp -f etc/supervisor/conf.d/rrtelebot.conf /etc/supervisor/conf.d/rrtelebot.conf
-
-supervisorctl update all
+sudo supervisorctl update all
