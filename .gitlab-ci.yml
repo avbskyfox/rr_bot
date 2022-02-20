@@ -16,7 +16,7 @@ before_script:
 create_env-job:
     stage: build
     environment:
-      name: development
+      name: staging
     script:
       - echo "DEBUG=$DEBUG" > .env
       - echo "SECRET_KEY=$SECRET_KEY" >> .env
@@ -44,7 +44,20 @@ create_env-job:
 
 test-job:
   environment:
-    name: development
+    name: staging
   stage: test
   script:
       - test -f .env
+
+deploy-job:
+  environment:
+    name: staging
+  stage: deploy
+  script:
+    - rsync -avz -e 'ssh -p 34135' ./ web@193.164.150.71:/home/web/app/
+    - ssh -p 34135 web@193.164.150.71 'cd /home/web/app; source prepear_venv.sh'
+  before_script:
+    - echo "Start deploy to staging..."
+  cache:
+    paths:
+      - .env
