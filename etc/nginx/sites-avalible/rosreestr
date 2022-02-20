@@ -24,10 +24,10 @@ server {
     }
     
     location /static/ {
-    root /home/web/app/rosreestr/;
+    root /home/web/app/;
     }
 
     location /media/ {
-    root /home/web/app/rosreestr/;
+    root /home/web/app/;
     }
 }
