@@ -23,20 +23,20 @@ create_env-job:
       - echo "ALLOWED_HOSTS=$ALLOWED_HOSTS" >> .env
       - echo "DATABASE_URL=$DATABASE_URL" >> .env
       - echo "CELERY_REDIS_URL=$CELERY_REDIS_URL" >> .env
-      - echo $ROSREESTR_POLICY_FILE >> .env
-      - echo $ROSREESTR_OFFERTA_FILE >> .env
-      - echo $TELEGRAM_API_TOKEN >> .env
-      - echo $DADATA_TOKEN >> .env
-      - echo $APIEGRN_TOKEN >> .env
-      - echo $BASE_N_TOKEN >> .env
-      - echo $FGIS_EGRN_TOKEN >> .env
-      - echo $TINKOFF_TERMINAL >> .env
-      - echo $TINKOFF_PASSWORD >> .env
-      - echo $CACHING_MIDDLEWARE_REDIS_HOST >> .env
-      - echo $CACHING_MIDDLEWARE_REDIS_PORT >> .env
-      - echo $CACHING_MIDDLEWARE_REDIS_DB >> .env
-      - echo $NOTIFIER_BOT_TOKEN >> .env
-      - echo $ADMIN_GROUP_ID >> .env
+      - echo "ROSREESTR_POLICY_FILE=$ROSREESTR_POLICY_FILE" >> .env
+      - echo "ROSREESTR_OFFERTA_FILE=$ROSREESTR_OFFERTA_FILE" >> .env
+      - echo "TELEGRAM_API_TOKEN=$TELEGRAM_API_TOKEN" >> .env
+      - echo "DADATA_TOKEN=$DADATA_TOKEN" >> .env
+      - echo "APIEGRN_TOKEN=$APIEGRN_TOKEN" >> .env
+      - echo "BASE_N_TOKEN=$BASE_N_TOKEN" >> .env
+      - echo "FGIS_EGRN_TOKEN=$FGIS_EGRN_TOKEN" >> .env
+      - echo "TINKOFF_TERMINAL=$TINKOFF_TERMINAL" >> .env
+      - echo "TINKOFF_PASSWORD=$TINKOFF_PASSWORD" >> .env
+      - echo "CACHING_MIDDLEWARE_REDIS_HOST=$CACHING_MIDDLEWARE_REDIS_HOST" >> .env
+      - echo "CACHING_MIDDLEWARE_REDIS_PORT=$CACHING_MIDDLEWARE_REDIS_PORT" >> .env
+      - echo "CACHING_MIDDLEWARE_REDIS_DB=$CACHING_MIDDLEWARE_REDIS_DB" >> .env
+      - echo "NOTIFIER_BOT_TOKEN=$NOTIFIER_BOT_TOKEN" >> .env
+      - echo "ADMIN_GROUP_ID=$ADMIN_GROUP_ID" >> .env
     artifacts:
       expire_in: 30 days
       paths:
