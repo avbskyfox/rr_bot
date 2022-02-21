@@ -60,4 +60,4 @@ deploy-job:
     - ssh -p 34135 avb@193.164.150.71 'cd /home/web/app; source supervisor_setup.sh'
     - ssh -p 34135 avb@193.164.150.71 'cd /home/web/app; source nginx_setup.sh'
   before_script:
-    - echo "Start deploy to staging..."
+    - echo "Start deploy to staging.."
