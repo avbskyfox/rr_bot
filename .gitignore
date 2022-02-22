@@ -12,7 +12,5 @@ tokens.ini
 .env
 bot.log
 production_env
-/last_order
 /last_int
-/last_bill
 
