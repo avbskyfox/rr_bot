@@ -1,6 +1,7 @@
 import environ
 
 env = environ.Env()
+SSL_VERIFY = False
 
 ROSREESTR_POLICY_FILE = env('ROSREESTR_POLICY_FILE')
 ROSREESTR_OFFERTA_FILE = env('ROSREESTR_OFFERTA_FILE')
