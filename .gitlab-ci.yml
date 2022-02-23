@@ -54,7 +54,7 @@ deploy-job:
     name: production
   stage: deploy
   script:
-    - rsync -avz --exclude 'venv' -e 'ssh -p 34135' ./ web@193.164.150.71:/home/web/app/
+    - rsync -avz --exclude 'venv' -e 'ssh -p 34135' ./ web@193.164.150.71:/home/web/app_prod/
     - ssh -p 34135 web@193.164.150.71 'cd /home/web/app; source prepear_venv.sh'
     - ssh -p 34135 web@193.164.150.71 'cd /home/web/app; source postgresql_setup.sh'
     - ssh -p 34135 web@193.164.150.71 'cd /home/web/app; source make_migrations.sh'
