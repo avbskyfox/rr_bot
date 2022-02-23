@@ -4,7 +4,7 @@ import aiohttp
 from django.conf import settings
 from loguru import logger
 
-from rr_backend.rosreestr import NotFound
+from rr_backend.rosreestr import NotFound, TemporaryUnavalible
 
 APIEGRN_TOKEN = settings.APIEGRN_TOKEN
 # APIEGRN_TOKEN = 'PXN3-L0OV-IE7C-A1FZ'
@@ -33,6 +33,8 @@ class ApiEgrnClient:
             async with session.post(SEARCH_URL, json=data, headers=headers) as response:
                 result = await response.json()
                 logger.debug(f'api_egrn: {result}')
+                if result['error'] == {'code': 503, 'mess': 'Rosreestr is temporarily unavailable'}:
+                    raise TemporaryUnavalible('result')
                 return [{'nobjectCn': item['CADNOMER'], 'addressNotes': item['ADDRESS']} for
                         item in result['objects']]
 

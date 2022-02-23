@@ -15,13 +15,14 @@ from rr_backend.middlewares.cashing_middleware import async_cashed_call
 class Backend:
     @classmethod
     @async_to_sync
-    async def find_adress(cls, address: str, chat_id):
+    async def find_adress(cls, address: str, chat_id=None):
         return await cls.async_find_adress(address, chat_id)
 
     @staticmethod
     @async_cashed_call
-    async def async_find_adress(address: str, chat_id):
-        send_progress_message.delay(chat_id, 'проверяем адрес...')
+    async def async_find_adress(address: str, chat_id=None):
+        if chat_id is not None:
+            send_progress_message.delay(chat_id, 'проверяем адрес...')
         variants = await DadataClient.async_find_address(address)
         # logger.debug(len(variants))
         #
@@ -48,17 +49,18 @@ class Backend:
         #         variants.append(lower)
         #
         # group_bt_street(variants)
-        delete_last_progress_message.delay(chat_id)
+        if chat_id is not None:
+            delete_last_progress_message.delay(chat_id)
         return variants
 
     @classmethod
     @async_to_sync
-    async def objects_by_address(cls, dadata, chat_id):
+    async def objects_by_address(cls, dadata, chat_id=None):
         return await cls.async_objects_by_address(dadata, chat_id)
 
     @classmethod
     @async_cashed_call
-    async def async_objects_by_address(cls, dadata, chat_id):
+    async def async_objects_by_address(cls, dadata, chat_id=None):
 
         async def obj_filter(arg):
             asd = await DadataClient.async_find_address(arg['addressNotes'])
@@ -67,7 +69,8 @@ class Backend:
             return (asd[0]['value']) == dadata['value']
 
         try:
-            send_progress_message.delay(chat_id, '⏳ опрашиваем Росреестр...')
+            if chat_id is not None:
+                send_progress_message.delay(chat_id, '⏳ опрашиваем Росреестр...')
             objects = await RosreestrClient.find_objects(dadata)
             filtred_objects = []
             for item in objects:
@@ -87,7 +90,8 @@ class Backend:
             if len(result) == 0:
                 raise NotFound('не найдена инфомрация ни по одному объекту')
         except NotFound:
-            send_progress_message.delay(chat_id, '⏳ ищем информацию...')
+            if chat_id is not None:
+                send_progress_message.delay(chat_id, '⏳ ищем информацию...')
             objects = await ApiEgrnClient.search(dadata['value'])
             # objects = await find_object(dadata)
             result = []
@@ -95,15 +99,17 @@ class Backend:
                 info = await cls.async_object_by_number(item['nobjectCn'], chat_id)
                 result.append(info)
         if len(result) != 0:
-            delete_last_progress_message.delay(chat_id)
+            if chat_id is None:
+                delete_last_progress_message.delay(chat_id)
             return result
         else:
             return result
 
     @staticmethod
     @async_cashed_call
-    async def async_object_by_number(number: str, chat_id):
-        send_progress_message.delay(chat_id, '⏳ ищем подробную информацию об объекте...')
+    async def async_object_by_number(number: str, chat_id=None):
+        if chat_id is None:
+            send_progress_message.delay(chat_id, '⏳ ищем подробную информацию об объекте...')
         found = False
         for i in range(0, 3):
             try:
@@ -115,12 +121,13 @@ class Backend:
                 break
         if not found:
             raise NotFound
-        delete_last_progress_message(chat_id)
+        if chat_id is not None:
+            delete_last_progress_message(chat_id)
         return result
 
     @classmethod
     @async_to_sync
-    async def object_by_number(cls, number: str, chat_id):
+    async def object_by_number(cls, number: str, chat_id=None):
         return await cls.async_object_by_number(number, chat_id)
 
     @staticmethod
