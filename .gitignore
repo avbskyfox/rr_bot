@@ -1,5 +1,16 @@
+venv
 db.sqlite3
 cabinet/__pycache__/
 cabinet/migrations/__pycache__/
 rosreestr/__pycache__/
 /.idea/
+cabinet/migrations/*
+rr_telebot/migrations/*
+tinkoff_kassa/migrations/*
+*/_trial_temp/
+tokens.ini
+.env
+bot.log
+production_env
+/last_int
+

@@ -1,0 +1,9 @@
+---
+- name: Deploy
+  hosts: terragent.ru
+  tasks:
+    - name: Git checkout
+      ansible.builtin.git:
+        repo: 'git@github.com:avbskyfox/rosreestr.git'
+        dest: app/rosreestr
+        version: develop

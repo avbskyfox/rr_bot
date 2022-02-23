@@ -1,0 +1,7 @@
+POST http://127.0.0.1:8000/tinkoff_notification
+Content-Type: application/json
+
+{"TerminalKey":"1634909634238DEMO","OrderId":"160c","Success":true,"Status":"AUTHORIZED","PaymentId":811898802,"ErrorCode":"0","Amount":100,"CardId":116858809,"Pan":"430000******0777","ExpDate":"1122","Token":"387acfce121a7ca2be404293ba6836157d5e141b01ef3631d9f7510949d0cca6"}
+
+###
+

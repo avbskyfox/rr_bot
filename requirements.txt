@@ -1,0 +1,14 @@
+django
+aiohttp
+loguru
+aiogram
+yarl
+twisted
+celery
+redis
+daphne
+requests
+psycopg2-binary
+django-environ
+pyTelegramBotAPI
+asgiref

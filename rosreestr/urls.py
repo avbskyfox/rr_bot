@@ -15,7 +15,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from cabinet.views import TinkoffWebhookView
+from django.views.decorators.csrf import csrf_exempt
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('tinkoff_notification', csrf_exempt(TinkoffWebhookView.as_view()), name='tinkoff_notification'),
 ]

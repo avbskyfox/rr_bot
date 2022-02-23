@@ -1,0 +1,7 @@
+init_url = 'https://securepay.tinkoff.ru/v2/Init'
+finish_authorise = 'https://securepay.tinkoff.ru/v2/FinishAuthorize'
+confirm_url = 'https://securepay.tinkoff.ru/v2/Confirm'
+cancel_url = 'https://securepay.tinkoff.ru/v2/Cancel'
+get_state_url = 'https://securepay.tinkoff.ru/v2/GetState'
+resend_url = 'https://securepay.tinkoff.ru/v2/Resend'
+submith_3d_authorization_url = 'https://securepay.tinkoff.ru/Submit3DSAuthorization'

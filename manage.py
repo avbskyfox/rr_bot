@@ -2,9 +2,11 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+from multiprocessing import Process
 
 
 def main():
+    proc = Process()
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rosreestr.settings')
     try:
