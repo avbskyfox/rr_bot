@@ -16,7 +16,7 @@ before_script:
 create_env-job:
     stage: build
     environment:
-      name: staging
+      name: production
     script:
       - echo "DEBUG=$DEBUG" > .env
       - echo "SECRET_KEY=$SECRET_KEY" >> .env
@@ -44,14 +44,14 @@ create_env-job:
 
 test-job:
   environment:
-    name: staging
+    name: production
   stage: test
   script:
       - test -f .env
 
 deploy-job:
   environment:
-    name: staging
+    name: production
   stage: deploy
   script:
     - rsync -avz --exclude 'venv' -e 'ssh -p 34135' ./ web@193.164.150.71:/home/web/app/
