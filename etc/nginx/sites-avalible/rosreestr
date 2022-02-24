@@ -1,4 +1,4 @@
-upstream daphne-bac
+upstream daphne-backend-staging
 kend-staging {
     server localhost:8080;
 }
