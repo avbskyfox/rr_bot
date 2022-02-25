@@ -5,5 +5,5 @@ sudo -u postgres psql -v ON_ERROR_STOP=1 -P pager=off << EOF
     alter role web set client_encoding to 'utf8';
     alter role web set default_transaction_isolation to 'read committed';
     alter role web set timezone to 'Europe/Moscow';
-    create database rosreestr_db owner web;
+    create database rosreestr_staging_db owner web;
 EOF

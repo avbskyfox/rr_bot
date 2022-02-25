@@ -56,6 +56,7 @@ deploy-job:
   script:
     - rsync -avz --exclude 'venv' -e 'ssh -p 34135' ./ web@193.164.150.71:/home/web/app/
     - ssh -p 34135 web@193.164.150.71 'cd /home/web/app; source prepear_venv.sh'
+    - ssh -p 34135 web@193.164.150.71 'cd /home/web/app; source postresql_setup.sh'
     - ssh -p 34135 web@193.164.150.71 'cd /home/web/app; source make_migrations.sh'
     - ssh -p 34135 avb@193.164.150.71 'cd /home/web/app; source supervisor_setup.sh'
     - ssh -p 34135 avb@193.164.150.71 'cd /home/web/app; source nginx_setup.sh'

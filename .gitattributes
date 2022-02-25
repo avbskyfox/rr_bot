@@ -1,1 +1,4 @@
 .gitlab-ci.yml merge=ours
+last_bill merge=ours
+last_order merge=ours
+postgresql_setup.sh merge=ours
