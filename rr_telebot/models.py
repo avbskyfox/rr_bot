@@ -357,6 +357,7 @@ class BalanceDialog(models.Model):
             keyboard.add(button)
         return text, keyboard
 
+    @conditions_accepted_permission
     def press_refill(self, data: str, message=None):
         # self.flush()
         bill_set = Bill.objects.filter(user=self.user, is_payed=False)
