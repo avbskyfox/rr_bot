@@ -37,8 +37,8 @@ server {
 }
 
 server {
-    listen 8080 default_server;
-    listen [::]:8080 default_server;
+    listen 8090 default_server;
+    listen [::]:8090 default_server;
 
     location / {
         try_files $uri @proxy_to_app;
