@@ -450,6 +450,9 @@ class BalanceDialog(models.Model):
     @conditions_accepted_permission
     def press_purse(self, tet: str):
         # self.flush()
+        logger.debug(settings.DEFAULT_CURENCY)
+        currency = Curency.objects.get(settings.DEFAULT_CURENCY)
+        logger.debug(f'{currency.id}: {currency.name}')
         purse, _ = self.user.purse_set.get_or_create(curency__name=settings.DEFAULT_CURENCY)
         keyboard = types.InlineKeyboardMarkup()
         button = types.InlineKeyboardButton(text='💳 Пополнить', callback_data='refill')
