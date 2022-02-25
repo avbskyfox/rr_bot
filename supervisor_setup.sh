@@ -5,4 +5,5 @@ yes | sudo cp -f etc/supervisor/conf.d/rrtelebot.conf /etc/supervisor/conf.d/rrt
 yes | sudo cp -f etc/supervisor/conf.d/celery.conf /etc/supervisor/conf.d/celery.conf
 
 sudo supervisorctl reread
+sudo supervisorctl update all
 sudo supervisorctl restart all
