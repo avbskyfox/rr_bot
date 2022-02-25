@@ -15,8 +15,6 @@ def update_bill_status(bill_id, chat_id):
     bill.update_payment()
     if not bill.is_payed:
         update_bill_status.retry()
-    else:
-        bot.send_message(chat_id, f'На ваш сет начисленно {int(bill.amount / 100)} RUR')
 
 
 @shared_task(default_retry_delay=30, max_retries=3)
