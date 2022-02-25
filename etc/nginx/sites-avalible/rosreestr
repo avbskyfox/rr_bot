@@ -3,7 +3,7 @@ upstream daphne-backend-staging {
 }
 
 upstream daphne-backend-prod {
-    server localhost:8000
+    server localhost:8000;
 }
 
 server {
