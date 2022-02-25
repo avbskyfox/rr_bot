@@ -1,5 +1,4 @@
-upstream daphne-bac
-kend-staging {
+upstream daphne-backend-staging {
     server localhost:8080;
 }
 
