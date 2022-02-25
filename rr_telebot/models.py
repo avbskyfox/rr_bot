@@ -451,6 +451,9 @@ class BalanceDialog(models.Model):
     def press_purse(self, tet: str):
         # self.flush()
         logger.debug(settings.DEFAULT_CURENCY)
+        currencies = Curency.objects.all()
+        for item in currencies:
+            logger.debug(f'{item.id}: {item.name}')
         currency = Curency.objects.get(settings.DEFAULT_CURENCY)
         logger.debug(f'{currency.id}: {currency.name}')
         purse, _ = self.user.purse_set.get_or_create(curency__name=settings.DEFAULT_CURENCY)
