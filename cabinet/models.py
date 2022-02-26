@@ -355,6 +355,7 @@ class Bill(models.Model):
 
     def update_payment(self):
         with RedisLock(redis, f'bill_{self.id}', 60):
+            self.refresh_from_db()
             if self.payment is not None:
                 self.payment.get_state()
                 if not self.is_payed and self.payment.is_confirmed:

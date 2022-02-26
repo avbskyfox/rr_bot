@@ -5,7 +5,7 @@ from loguru import logger
 from redis.lock import Lock
 
 
-sleep_time = 3
+sleep_time = 1
 store_value = True
 name_prefix = 'masBT5cavaud3265dvk'
 
