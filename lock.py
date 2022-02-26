@@ -22,10 +22,10 @@ class RedisLock:
         self.sleep_time = sleep_time
 
     def __enter__(self):
-        value = True
-        while value is not None:
+        value = 'lock'
+        while value == 'lock':
             value = self.redis.get(self.name)
-            if value is not None:
+            if value == 'lock':
                 sleep(sleep_time)
         self.redis.set(self.name, True, ex=self.timeout)
 
