@@ -1,10 +1,9 @@
-upstream daphne-backend-staging
-kend-staging {
+upstream daphne-backend-staging {
     server localhost:8080;
 }
 
 upstream daphne-backend-prod {
-    server localhost:8000
+    server localhost:8000;
 }
 
 server {
@@ -38,8 +37,8 @@ server {
 }
 
 server {
-    listen 8080 default_server;
-    listen [::]:8080 default_server;
+    listen 8090 default_server;
+    listen [::]:8090 default_server;
 
     location / {
         try_files $uri @proxy_to_app;

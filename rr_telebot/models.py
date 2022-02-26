@@ -357,6 +357,7 @@ class BalanceDialog(models.Model):
             keyboard.add(button)
         return text, keyboard
 
+    @conditions_accepted_permission
     def press_refill(self, data: str, message=None):
         # self.flush()
         bill_set = Bill.objects.filter(user=self.user, is_payed=False)
@@ -425,7 +426,7 @@ class BalanceDialog(models.Model):
                                        amount=amount,
                                        price=amount * curency.course)
             bill.create_payment()
-            # update_bill_status.delay(bill.id, self.user.telegram_id)
+            update_bill_status.delay(bill.id, self.user.telegram_id)
             keyboard = types.InlineKeyboardMarkup()
             button = types.InlineKeyboardButton(text='Оплатить через Tinkoff', url=bill.payment.payment_url)
             keyboard.add(button)
@@ -450,13 +451,8 @@ class BalanceDialog(models.Model):
     @conditions_accepted_permission
     def press_purse(self, tet: str):
         # self.flush()
-        logger.debug(settings.DEFAULT_CURENCY)
-        currencies = Curency.objects.all()
-        for item in currencies:
-            logger.debug(f'{item.id}: {item.name}')
-        currency, _ = Curency.objects.get(settings.DEFAULT_CURENCY)
-        logger.debug(f'{currency.id}: {currency.name}')
-        purse, _ = self.user.purse_set.get_or_create(curency__name=settings.DEFAULT_CURENCY)
+        currency = Curency.objects.get(name=settings.DEFAULT_CURENCY)
+        purse, _ = self.user.purse_set.get_or_create(curency=currency)
         keyboard = types.InlineKeyboardMarkup()
         button = types.InlineKeyboardButton(text='💳 Пополнить', callback_data='refill')
         keyboard.add(button)
@@ -477,11 +473,12 @@ class BalanceDialog(models.Model):
         keyboard.add(change_email)
         keyboard.add(change_phone)
         keyboard.add(feedback)
-        # curency = Curency.objects.get(name__exact=settings.DEFAULT_CURENCY)
+        currency = Curency.objects.get(name=settings.DEFAULT_CURENCY)
+        purse, _ = self.user.purse_set.get_or_create(curency=currency)
         text = f'''⭐️ <b>Ваш ID</b>: {self.user.telegram_id}
 📧 <b>Email</b>: {self.user.email}
 ☎️ <b>Телефон</b>: {self.user.phone_number}
-💰 <b>Баланс</b>: {self.user.purse_set.get(curency__name=settings.DEFAULT_CURENCY).ammount} {settings.DEFAULT_CURENCY}
+💰 <b>Баланс</b>: {purse.ammount} {currency.name}
 🔎 <b>Количество доступных поисков сегодня</b>: {self.user.searches_remain}
 '''
         # Вы с нами с: {self.user.date_joined.strftime('%d.%m.%Y')}

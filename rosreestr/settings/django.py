@@ -40,6 +40,7 @@ SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool('DEBUG')
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
+CSRF_TRUSTED_ORIGINS = ['http://terragent.ru:8090', 'http://terragent.ru']
 
 # Application definition
 
