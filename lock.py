@@ -27,7 +27,7 @@ class RedisLock:
             value = self.redis.get(self.name)
             if value == 'lock':
                 sleep(sleep_time)
-        self.redis.set(self.name, True, ex=self.timeout)
+        self.redis.set(self.name, 'lock', ex=self.timeout)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.redis.delete(self.name)
