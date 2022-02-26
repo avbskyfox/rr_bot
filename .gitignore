@@ -13,6 +13,6 @@ tokens.ini
 bot.log
 production_env
 /last_int
-
+*/__pycache__
 /excerpt2.pdf
 /variants
