@@ -354,7 +354,7 @@ class Bill(models.Model):
         self.save()
 
     def update_payment(self):
-        with redis.lock(name=f'bill_{self.id}', timeout=15) as lock:
+        with redis.lock(name=f'bill_{self.id}', timeout=60) as lock:
             if self.payment is not None:
                 self.payment.get_state()
                 if not self.is_payed and self.payment.is_confirmed:
