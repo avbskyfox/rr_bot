@@ -26,6 +26,7 @@ class TinkoffWebhookView(View):
         if token == my_token:
             try:
                 bill = Bill.objects.get(number=data['OrderId'])
+                logger.debug(f'call update_payment from TinkoffWebhookView for bill: {bill.number}')
                 bill.update_payment()
                 return HttpResponse('OK')
             except Bill.DoesNotExist:
