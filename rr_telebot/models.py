@@ -363,6 +363,7 @@ class BalanceDialog(models.Model):
         bill_set = Bill.objects.filter(user=self.user, is_payed=False)
 
         for bill in bill_set:
+            logger.debug(f'call update_payment from press_refill for bill: {bill.number}')
             bill.update_payment()
 
         filtred_bill_set = bill_set.filter(is_payed=False)

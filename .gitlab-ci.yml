@@ -70,3 +70,4 @@ deploy-job:
     - ssh -p 34135 avb@193.164.150.71 'cd /home/web/app_prod; source nginx_setup.sh'
   before_script:
     - echo "Start deploy to staging.."
+

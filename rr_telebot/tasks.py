@@ -1,6 +1,7 @@
 from celery import shared_task
 from django.conf import settings
 from telebot import TeleBot
+from loguru import logger
 
 from cabinet.models import Bill
 
@@ -12,6 +13,7 @@ group_id = settings.ADMIN_GROUP_ID
 @shared_task(default_retry_delay=10, max_retries=24)
 def update_bill_status(bill_id, chat_id):
     bill = Bill.objects.get(pk=bill_id)
+    logger.debug(f'call update_payment from celery task update_bill_status for bill: {bill.number}')
     bill.update_payment()
     if not bill.is_payed:
         update_bill_status.retry()
