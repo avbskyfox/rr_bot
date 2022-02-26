@@ -16,6 +16,7 @@ before_script:
 create_env-job:
   except:
     - /^feature.*/
+    - develop
   stage: build
   environment:
     name: staging
@@ -47,6 +48,7 @@ create_env-job:
 test-job:
   except:
     - /^feature.*/
+    - develop
   environment:
     name: staging
   stage: test
@@ -56,6 +58,7 @@ test-job:
 deploy-job:
   except:
     - /^feature.*/
+    - develop
   environment:
     name: staging
   stage: deploy
