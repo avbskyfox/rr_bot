@@ -63,7 +63,7 @@ deploy-job:
     name: staging
   stage: deploy
   script:
-    - rsync -avz --exclude 'venv' -e 'ssh -p 34135' ./ web@193.164.150.71:/home/web/app/
+    - rsync -avz --exclude 'venv' -e 'ssh -p 34135' ./ web@193.164.150.71:/home/web/app_prod/
     - ssh -p 34135 web@193.164.150.71 'cd /home/web/app_prod; source prepear_venv.sh'
     - ssh -p 34135 web@193.164.150.71 'cd /home/web/app_prod; source make_migrations.sh'
     - ssh -p 34135 avb@193.164.150.71 'cd /home/web/app_prod; source supervisor_setup.sh'
