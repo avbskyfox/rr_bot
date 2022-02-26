@@ -9,7 +9,7 @@ from django.db import transaction
 from django.utils import timezone
 from loguru import logger
 from redis import Redis
-from redis.lock import Lock
+from lock import RedisLock
 from notifiers.telegram import send_message
 
 from notifiers.smtp import send_mail
@@ -269,7 +269,7 @@ class Excerpt(models.Model):
     is_delivered = models.BooleanField(default=False, verbose_name='Отправлена?')
 
     def check_status(self):
-        with Lock(redis, name=f'exerpt_{self.id}'):
+        with RedisLock(redis, f'exerpt_{self.id}', 60):
             result = Backend.get_doc_status(self.foreign_number)
             if result['status'] == 'ready':
                 self.is_ready = True
@@ -354,7 +354,7 @@ class Bill(models.Model):
         self.save()
 
     def update_payment(self):
-        with redis.lock(name=f'bill_{self.id}', timeout=60) as lock:
+        with RedisLock(redis, f'bill_{self.id}', 60):
             if self.payment is not None:
                 self.payment.get_state()
                 if not self.is_payed and self.payment.is_confirmed:
