@@ -10,6 +10,7 @@ from django.utils import timezone
 from loguru import logger
 from redis import Redis
 from redis.lock import Lock
+from notifiers.telegram import send_message
 
 from notifiers.smtp import send_mail
 from rr_backend.backend import Backend
@@ -276,6 +277,10 @@ class Excerpt(models.Model):
                 self.save()
                 return True
             else:
+                delta = (self.date_created - timezone.now()).days
+                logger.debug()
+                if delta >= 2:
+                    send_message(f'Простаивает выписка {self.order_id}_{self.type_id}: {delta} д.')
                 return False
 
     def download_docs(self):
