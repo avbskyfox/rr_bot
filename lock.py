@@ -1,5 +1,9 @@
 from time import sleep
 from redis import Redis
+from loguru import logger
+
+from redis.lock import Lock
+
 
 sleep_time = 0.1
 store_value = True
@@ -22,12 +26,28 @@ class RedisLock:
         self.sleep_time = sleep_time
 
     def __enter__(self):
-        value = 'lock'
-        while value == 'lock':
-            value = self.redis.get(self.name)
-            if value == 'lock':
-                sleep(sleep_time)
-        self.redis.set(self.name, 'lock', ex=self.timeout)
+        self.try_to_acquire()
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.release()
+
+    def locked(self):
+        val = self.redis.get(self.name)
+        logger.debug(f'key: {self.name},val: {val}')
+        if val is not None:
+            return True
+        else:
+            return False
+
+    def acquire(self):
+        self.redis.set(self.name, 'lock', ex=self.timeout)
+
+    def try_to_acquire(self):
+        logger.debug(f'Try to acquire lock named {self.name}')
+        while self.locked():
+            sleep(sleep_time)
+        self.acquire()
+
+    def release(self):
         self.redis.delete(self.name)
