@@ -278,7 +278,7 @@ class Excerpt(models.Model):
                 return True
             else:
                 delta = (self.date_created - timezone.now()).days
-                logger.debug()
+                logger.debug(f'Простаивает выписка {self.order_id}_{self.type_id}: {delta} д.')
                 if delta >= 2:
                     send_message(f'Простаивает выписка {self.order_id}_{self.type_id}: {delta} д.')
                 return False
