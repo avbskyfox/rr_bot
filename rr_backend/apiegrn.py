@@ -10,6 +10,7 @@ APIEGRN_TOKEN = settings.APIEGRN_TOKEN
 # APIEGRN_TOKEN = 'PXN3-L0OV-IE7C-A1FZ'
 SEARCH_URL = 'https://apiegrn.ru/api/cadaster/search'
 INFO_URL = 'https://apiegrn.ru/api/cadaster/objectInfoFull'
+ACCOUNT_URL = 'https://apiegrn.ru/api/account/info'
 
 
 def _get_from(details: dict, key_string):
@@ -74,3 +75,10 @@ class ApiEgrnClient:
                 }
                 logger.debug(output)
                 return output
+
+    @staticmethod
+    async def account_info():
+        headers = {'Token': APIEGRN_TOKEN}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(ACCOUNT_URL, headers=headers) as response:
+                return await response.json()

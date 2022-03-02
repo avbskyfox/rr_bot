@@ -1,12 +1,8 @@
 from django.test import TestCase
 from asgiref.sync import async_to_sync
-import os
-import django
-#
-#
-# os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rosreestr.settings')
-# django.setup()
+from asyncio import run
 from rr_backend.apiegrn import ApiEgrnClient
+from loguru import logger
 
 addr_list = [
     'г Екатеринбург, ул Машинная, д 31В, кв 107',
@@ -24,3 +20,7 @@ class TestApiEgrnClient(TestCase):
         for addr in addr_list:
             result = search(addr)
             print(result)
+
+    def test_account_info(self):
+        response = run(ApiEgrnClient.account_info())
+        logger.debug(response)

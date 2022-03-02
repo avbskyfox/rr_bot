@@ -37,7 +37,7 @@ class BasenClient:
     def check_basen_deposit():
         payload = {'base_n_api_key': TOKEN}
         url = BASE_URL + CHECK_BASE_N_DEPOSIT_URL
-        return requests.post(url, json=payload).json()
+        return requests.post(url, json=payload).json()['deposites'][0]['base_n_deposit']
 
     @classmethod
     def order_docs(cls, cadnum: str, doc_type: str):
