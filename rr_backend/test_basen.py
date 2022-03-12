@@ -7,4 +7,6 @@ class TestBasenClient(TestCase):
     def test_check_basen_deposit(self):
         response = BasenClient.check_basen_deposit()
         logger.debug(f'current deposit: {response}')
+        response = BasenClient.check_fgis_deposit()
+        logger.debug(f'fgis deposit: {response}')
         self.assertIsInstance(response, int)
