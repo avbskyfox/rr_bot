@@ -2,7 +2,9 @@ import json
 
 import aiohttp
 from django.conf import settings
+from django.utils import timezone
 from loguru import logger
+import os
 
 from rr_backend.rosreestr import NotFound, TemporaryUnavalible
 
@@ -11,6 +13,12 @@ APIEGRN_TOKEN = settings.APIEGRN_TOKEN
 SEARCH_URL = 'https://apiegrn.ru/api/cadaster/search'
 INFO_URL = 'https://apiegrn.ru/api/cadaster/objectInfoFull'
 ACCOUNT_URL = 'https://apiegrn.ru/api/account/info'
+
+SELF_CHECK_FILE = 'apiegrn_selfcheck.json'
+SEARCH_COST = 2
+ALARM_BALANCE = 100
+ALARM_FREE_COUNT = 50
+SEARCHES_BEFORE_CHECK = 10
 
 
 def _get_from(details: dict, key_string):
@@ -23,8 +31,9 @@ def _get_from(details: dict, key_string):
 
 
 class ApiEgrnClient:
-    @staticmethod
-    async def search(address: str):
+    @classmethod
+    async def search(cls, address: str):
+        await cls.check()
         headers = {'Token': APIEGRN_TOKEN}
         data = {
             'mode': 'normal',
@@ -82,3 +91,36 @@ class ApiEgrnClient:
         async with aiohttp.ClientSession() as session:
             async with session.get(ACCOUNT_URL, headers=headers) as response:
                 return await response.json()
+
+    @classmethod
+    async def check(cls):
+        if not os.path.exists('apiegrn_selfcheck.json'):
+            await cls._dump_account_info()
+        else:
+            with open(SELF_CHECK_FILE, 'r') as f:
+                data = json.load(f)
+            if data['searches_before_check'] <= 0:
+                await cls._dump_account_info()
+            else:
+                new_data = {
+                    'free_search': data['free_search'] - 1,
+                    'balance': data['balance'] - SEARCH_COST,
+                    'searches_before_check': data['searches_before_check'] - 1
+                }
+                with open(SELF_CHECK_FILE, 'w') as f:
+                    json.dump(new_data, f)
+
+    @classmethod
+    async def _dump_account_info(cls):
+        info = await cls.account_info()
+        data = {
+            'free_search': info['tariff']['search_limit']['free'],
+            'balance': info['balance'],
+            'searches_before_check': SEARCHES_BEFORE_CHECK
+        }
+        if data['free_search'] <= ALARM_FREE_COUNT or data['balance'] <= ALARM_BALANCE:
+            from rr_telebot.tasks import send_to_adm_group
+            send_to_adm_group.delay(f'API EGRN баланс: {data["balance"]}\n'
+                                    f'количество бесплатных поисков: {data["free_search"]}')
+        with open(SELF_CHECK_FILE, 'w') as f:
+            json.dump(data, f)

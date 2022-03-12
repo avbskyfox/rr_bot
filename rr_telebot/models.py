@@ -66,12 +66,12 @@ class Ticket(models.Model):
 
     def save(self, *args, **kwargs):
         if self.closed:
-            send_to_adm_group(f'Тикет {self.id} закрыт: {self.description}')
+            send_to_adm_group.delay(f'Тикет {self.id} закрыт: {self.description}')
         if self.need_notify_user:
             self.notify()
         super(Ticket, self).save(*args, **kwargs)
         if not self.closed:
-            send_to_adm_group(f'Тикет {self.id} создан: {self.description}')
+            send_to_adm_group.delay(f'Тикет {self.id} создан: {self.description}')
 
     def __str__(self):
         return str(self.id)
