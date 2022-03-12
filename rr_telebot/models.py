@@ -84,10 +84,19 @@ class Review(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name='Пользователь')
     text = models.TextField(max_length=8192, blank=True, verbose_name='Описание')
-    grade = models.IntegerField(null=True)
+    grade = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return f'{str(self.id)} - {self.user.username}'
+
+    def save(self, *args, **kwargs):
+        try:
+            Review.objects.get(pk=self.pk)
+        except Review.DoesNotExist:
+            send_to_adm_group.delay(f'Пользователь {self.user.username} оставил отзыв:\n{self.text}')
+        finally:
+            super(Review, self).save(*args, **kwargs)
+
 
 
 class SearchHistory(models.Model):
@@ -632,7 +641,7 @@ class BalanceDialog(models.Model):
         button2 = types.InlineKeyboardButton(text='🆘 Сообщить о проблеме', callback_data='report_probem')
         keyboard1.add(button2)
         self.set_resolver('make_feedback')
-        return 'Здесь вы можете', keyboard1
+        return 'Здесь вы можете:', keyboard1
 
     def make_feedback(self, data: str):
         if data == 'review':
