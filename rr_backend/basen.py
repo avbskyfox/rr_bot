@@ -11,6 +11,7 @@ BASE_URL = 'https://api-rosreestr.base-n.ru/rosreestr/api/'
 GET_BY_CADNUM_URL = 'get_by_cadnum/'
 SEARCH_BY_ADDRESS_URL = 'search_by_address/'
 CHECK_BASE_N_DEPOSIT_URL = 'check_base_n_deposit/'
+CHECK_FGIS_DEPOSIT = 'check_fgis_deposit'
 CHECK_ORDER_URL = 'check_order_status/'
 GET_EXCERPT = 'get_extruct/'
 ORDER_URL = 'order_extruct/'
@@ -37,11 +38,20 @@ class BasenClient:
     def check_basen_deposit():
         payload = {'base_n_api_key': TOKEN}
         url = BASE_URL + CHECK_BASE_N_DEPOSIT_URL
+        return requests.post(url, json=payload).json()['deposites'][0]['base_n_deposit']
+
+    @staticmethod
+    def check_fgis_deposit():
+        payload = {'base_n_api_key': TOKEN}
+        url = BASE_URL + CHECK_FGIS_DEPOSIT
         return requests.post(url, json=payload).json()
 
     @classmethod
     def order_docs(cls, cadnum: str, doc_type: str):
-        logger.debug(f'base_n: {cls.check_basen_deposit()}')
+        balance = cls.check_basen_deposit()
+        logger.debug(f'base_n: {balance}')
+        from rr_telebot.tasks import send_to_adm_group
+        send_to_adm_group.delay(f'BASE-N баланс: {balance}')
         payload = {
             'base_n_api_key': TOKEN,
             'fgis_egrn_key': FGIS_EGRN_TOKEN,

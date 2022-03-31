@@ -16,3 +16,4 @@ production_env
 */__pycache__
 /excerpt2.pdf
 /variants
+/apiegrn_selfcheck.json

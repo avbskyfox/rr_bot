@@ -66,12 +66,12 @@ class Ticket(models.Model):
 
     def save(self, *args, **kwargs):
         if self.closed:
-            send_to_adm_group(f'Тикет {self.id} закрыт: {self.description}')
+            send_to_adm_group.delay(f'Тикет {self.id} закрыт: {self.description}')
         if self.need_notify_user:
             self.notify()
         super(Ticket, self).save(*args, **kwargs)
         if not self.closed:
-            send_to_adm_group(f'Тикет {self.id} создан: {self.description}')
+            send_to_adm_group.delay(f'Тикет {self.id} создан: {self.description}')
 
     def __str__(self):
         return str(self.id)
@@ -84,10 +84,19 @@ class Review(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name='Пользователь')
     text = models.TextField(max_length=8192, blank=True, verbose_name='Описание')
-    grade = models.IntegerField(null=True)
+    grade = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return f'{str(self.id)} - {self.user.username}'
+
+    def save(self, *args, **kwargs):
+        try:
+            Review.objects.get(pk=self.pk)
+        except Review.DoesNotExist:
+            send_to_adm_group.delay(f'Пользователь {self.user.username} оставил отзыв:\n{self.text}')
+        finally:
+            super(Review, self).save(*args, **kwargs)
+
 
 
 class SearchHistory(models.Model):
@@ -262,8 +271,7 @@ class BalanceDialog(models.Model):
             keyboard.add(orders_button, purse_button)
             # keyboard.add(purse_button)
             text = '''Привет! 
-Это бот-помощник «Террагент»
-Территория для агентов по недвижимости.
+Это бот-помощник для агентов по недвижимости.
 
 Здесь Вы можете:
 ✔ Узнать информацию об объекте недвижимости: (<b>Выписка-отчет</b>)
@@ -632,7 +640,7 @@ class BalanceDialog(models.Model):
         button2 = types.InlineKeyboardButton(text='🆘 Сообщить о проблеме', callback_data='report_probem')
         keyboard1.add(button2)
         self.set_resolver('make_feedback')
-        return 'Здесь вы можете', keyboard1
+        return 'Здесь вы можете:', keyboard1
 
     def make_feedback(self, data: str):
         if data == 'review':
@@ -694,7 +702,7 @@ class BalanceDialog(models.Model):
                 Ticket.objects.create(user=self.user,
                                       description=f'Исключение при поиске: {self.data["addr_variants"]["value"]}')
                 logger.exception(f'Exeption on search address: {self.data["addr_variants"]["value"]}')
-                return 'Низвестная ошибка!!! Мы уже разбираемся с этим. Попробуйте повторить запрос', None
+                return 'Неизвестная ошибка!!! Мы уже разбираемся с этим. <b>Попробуйте повторить запрос</b>', None
 
             if len(results) == 0:
                 Ticket.objects.create(user=self.user,
@@ -794,7 +802,10 @@ class BalanceDialog(models.Model):
                 return m, None
             else:
                 self.flush()
-                return f'Сформирован заказ № {order.number}', None
+                return [
+                    (f'Сформирован заказ № {order.number}\n\nРезультат поступит Вам на e-mail\nБлагодарим🤗', None),
+                    (f'Найдем что-то еще?😊', None)
+                ]
         elif data == 'cancel':
             self.flush()
             return 'Отменил!', None
