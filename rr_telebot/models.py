@@ -271,8 +271,7 @@ class BalanceDialog(models.Model):
             keyboard.add(orders_button, purse_button)
             # keyboard.add(purse_button)
             text = '''Привет! 
-Это бот-помощник «Террагент»
-Территория для агентов по недвижимости.
+Это бот-помощник для агентов по недвижимости.
 
 Здесь Вы можете:
 ✔ Узнать информацию об объекте недвижимости: (<b>Выписка-отчет</b>)
@@ -703,7 +702,7 @@ class BalanceDialog(models.Model):
                 Ticket.objects.create(user=self.user,
                                       description=f'Исключение при поиске: {self.data["addr_variants"]["value"]}')
                 logger.exception(f'Exeption on search address: {self.data["addr_variants"]["value"]}')
-                return 'Низвестная ошибка!!! Мы уже разбираемся с этим. Попробуйте повторить запрос', None
+                return 'Неизвестная ошибка!!! Мы уже разбираемся с этим. <b>Попробуйте повторить запрос</b>', None
 
             if len(results) == 0:
                 Ticket.objects.create(user=self.user,
