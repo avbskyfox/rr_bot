@@ -63,6 +63,8 @@ class Backend:
     async def async_objects_by_address(cls, dadata, chat_id=None):
 
         async def obj_filter(arg):
+            if arg['nobjectCn'] is None:
+                return False
             asd = await DadataClient.async_find_address(arg['addressNotes'])
             if len(asd) == 0:
                 return False
@@ -108,6 +110,7 @@ class Backend:
     @staticmethod
     @async_cashed_call
     async def async_object_by_number(number: str, chat_id=None):
+        logger.debug(number)
         if chat_id is None:
             send_progress_message.delay(chat_id, '⏳ ищем подробную информацию об объекте...')
         found = False

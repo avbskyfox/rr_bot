@@ -6,7 +6,8 @@ import asyncio
 from rr_backend.basen import BasenClient
 
 
-address_list = ['г Иркутск, мкр Лесной, ул Педагогическая, д 32']
+address_list = ['г Иркутск, мкр Лесной, ул Педагогическая, д 32',
+                'Пермь, улица Хабаровская, д.171, кв.60']
 numbers_list = ['']
 
 

@@ -59,6 +59,7 @@ class ApiEgrnClient:
             async with session.post(INFO_URL, json=data, headers=headers) as response:
                 text = await response.text()
                 variant = json.loads(text)
+                logger.debug(variant)
                 if variant['error']:
                     if variant['error']['code'] == 'OBJECT_NOT_FOUND':
                         raise NotFound
